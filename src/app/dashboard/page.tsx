@@ -6,12 +6,12 @@ import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/lib/auth';
-import { Plus, Upload, Search, User, LogOut, Key } from 'lucide-react';
+import { Plus, Upload, Search, User, LogOut, Key, FileText, HelpCircle, Code } from 'lucide-react';
 import { useState } from 'react';
 import { FeedEvidenceModal } from '@/components/feed-evidence-modal';
 import { AnalyzeOpportunityModal } from '@/components/analyze-opportunity-modal';
+import { Footer } from '@/components/footer';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -43,7 +43,18 @@ export default function DashboardPage() {
     { name: 'Domain Expertise', count: 15, color: 'bg-red-500' },
   ];
 
-  const completionPercentage = identity?.data ? Math.min(100, Object.keys(identity.data).length * 10) : 0;
+  const evidenceCount = identity?.evidence_count || 0;
+  
+  // Creative identity strength descriptor  
+  const getIdentityDepth = (count: number) => {
+    if (count === 0) return { label: 'Emerging', description: 'Your identity is taking shape', icon: '🌱' };
+    if (count <= 2) return { label: 'Developing', description: 'Building your foundation', icon: '🌿' };
+    if (count <= 5) return { label: 'Growing', description: 'Your story is expanding', icon: '🌳' };
+    if (count <= 10) return { label: 'Flourishing', description: 'Rich and multifaceted', icon: '🌲' };
+    return { label: 'Deep-rooted', description: 'Complex and well-established', icon: '🏔️' };
+  };
+  
+  const identityDepth = getIdentityDepth(evidenceCount);
 
   return (
     <ProtectedRoute>
@@ -53,22 +64,41 @@ export default function DashboardPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Identity Dashboard</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Idynic Dashboard</h1>
                 <p className="text-gray-600">Track your strategic identity and opportunities</p>
               </div>
-              <div className="flex items-center gap-4">
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  Profile {completionPercentage}% Complete
-                </Badge>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
-                    Welcome, {user?.attributes?.given_name || user?.username || 'User'}
-                  </span>
-                  <Button variant="outline" onClick={logout} className="flex items-center gap-2">
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </Button>
+              <div className="flex items-center gap-6">
+                {/* Navigation Links */}
+                <nav className="hidden md:flex items-center gap-4">
+                  <Link href="/about" className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                    <HelpCircle className="h-4 w-4" />
+                    What is Idynic?
+                  </Link>
+                  <Link href="/docs" className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                    <FileText className="h-4 w-4" />
+                    Docs
+                  </Link>
+                  <Link href="/api-docs" className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                    <Code className="h-4 w-4" />
+                    API
+                  </Link>
+                </nav>
+                
+                {/* User Info */}
+                <div className="flex items-center gap-4">
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {evidenceCount > 0 ? `${evidenceCount} Evidence Pieces` : 'Building Identity'}
+                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      Signed in as {user?.attributes?.email || user?.username || 'user@example.com'}
+                    </span>
+                    <Button variant="outline" onClick={logout} className="flex items-center gap-2">
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -92,11 +122,16 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span>Profile Completion</span>
-                      <span>{completionPercentage}%</span>
+                    <div className="text-center space-y-3">
+                      <div className="text-4xl">{identityDepth.icon}</div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{identityDepth.label}</h3>
+                        <p className="text-sm text-gray-600">{identityDepth.description}</p>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {evidenceCount > 0 ? `${evidenceCount} pieces of evidence` : 'Ready to add your first evidence'}
+                      </div>
                     </div>
-                    <Progress value={completionPercentage} className="w-full" />
                     <Button 
                       onClick={() => setFeedEvidenceOpen(true)}
                       className="w-full flex items-center gap-2"
@@ -191,7 +226,7 @@ export default function DashboardPage() {
                     variant="outline"
                   >
                     <Plus className="h-4 w-4" />
-                    Add Evidence
+                    Feed Identity
                   </Button>
                   <Link href="/api-keys">
                     <Button 
@@ -250,6 +285,8 @@ export default function DashboardPage() {
           open={analyzeOpportunityOpen} 
           onOpenChange={setAnalyzeOpportunityOpen} 
         />
+        
+        <Footer />
       </div>
     </ProtectedRoute>
   );
