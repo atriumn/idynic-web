@@ -14,8 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Link2, FileText } from 'lucide-react';
+import { Link2, FileText, Target, Zap } from 'lucide-react';
 
 interface AnalyzeOpportunityModalProps {
   open: boolean;
@@ -55,42 +54,58 @@ export function AnalyzeOpportunityModal({ open, onOpenChange }: AnalyzeOpportuni
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Analyze an Opportunity</DialogTitle>
-          <DialogDescription>
-            Add a job posting or opportunity to see how it aligns with your profile
+        <DialogHeader className="text-center">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
+            <Target className="h-8 w-8 text-white" />
+          </div>
+          <DialogTitle className="text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-center">
+            Discover Your Opportunity Match
+          </DialogTitle>
+          <DialogDescription className="text-base text-center">
+            Analyze how this opportunity aligns with your unique constellation of traits
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {!inputMethod ? (
-            // Input method selection
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setInputMethod('url')}
-              >
-                <CardHeader className="text-center">
-                  <Link2 className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                  <CardTitle className="text-lg">From URL</CardTitle>
-                  <CardDescription className="text-sm">
-                    Paste a job posting URL and we'll extract the details
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+            // Input method selection with different styling
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">How would you like to add this opportunity?</h3>
+                <p className="text-sm text-gray-600">Choose the method that works best for you</p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-3">
+                <div 
+                  className="group p-4 rounded-xl border-2 border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 opacity-50 cursor-not-allowed"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gray-400 rounded-lg flex items-center justify-center">
+                      <Link2 className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-500">Smart URL Analysis (Coming Soon)</h4>
+                      <p className="text-sm text-gray-400">Paste a job posting URL and we&apos;ll extract all the details automatically</p>
+                    </div>
+                  </div>
+                </div>
 
-              <Card 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setInputMethod('text')}
-              >
-                <CardHeader className="text-center">
-                  <FileText className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                  <CardTitle className="text-lg">Paste Text</CardTitle>
-                  <CardDescription className="text-sm">
-                    Copy and paste the job description directly
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+                <div 
+                  className="group cursor-pointer p-4 rounded-xl border-2 border-purple-200 hover:border-purple-400 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-all duration-200"
+                  onClick={() => setInputMethod('text')}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 group-hover:text-purple-700">Direct Text Input</h4>
+                      <p className="text-sm text-gray-600">Copy and paste the job description text directly for analysis</p>
+                    </div>
+                    <Zap className="h-5 w-5 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             // Input form
@@ -155,9 +170,19 @@ export function AnalyzeOpportunityModal({ open, onOpenChange }: AnalyzeOpportuni
                 <Button 
                   onClick={handleSubmit}
                   disabled={analyzeOpportunityMutation.isPending || (!opportunityText && !opportunityUrl)}
-                  className="flex-1"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
-                  {analyzeOpportunityMutation.isPending ? 'Analyzing...' : 'Analyze Opportunity'}
+                  {analyzeOpportunityMutation.isPending ? (
+                    <>
+                      <Zap className="h-4 w-4 mr-2 animate-pulse" />
+                      Discovering matches...
+                    </>
+                  ) : (
+                    <>
+                      <Target className="h-4 w-4 mr-2" />
+                      Discover Match
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

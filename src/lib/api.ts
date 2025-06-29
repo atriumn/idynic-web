@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081';
+const MCP_BASE_URL = process.env.NEXT_PUBLIC_MCP_BASE_URL || 'http://localhost:9001';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -10,14 +11,25 @@ const apiClient = axios.create({
   },
 });
 
-// Add auth interceptor
-apiClient.interceptors.request.use((config) => {
+// Create MCP axios instance
+const mcpClient = axios.create({
+  baseURL: MCP_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add auth interceptor to both clients
+const authInterceptor = (config: any) => {
   const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-});
+};
+
+apiClient.interceptors.request.use(authInterceptor);
+mcpClient.interceptors.request.use(authInterceptor);
 
 // Types based on backend models
 export interface Identity {
@@ -197,8 +209,27 @@ export interface FormatSolutionResponse {
 }
 
 export interface EvidenceSubmissionRequest {
-  evidence_type: string;
-  evidence_data: Record<string, any>;
+  source: string;
+  text: string;
+}
+
+export interface EvidenceRecord {
+  evidenceId: string;
+  source: string;
+  traitStatus: 'PENDING' | 'PROCESSING' | 'COMPLETE' | 'ERROR';
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface Trait {
+  trait: string;
+  evidence: string;
+  confidence: number;
+  name: string;
+  weight: number;
+  lastObserved: number;
+  evidenceSnippets?: string[];
+  reasoning?: string[];
 }
 
 // API Functions
@@ -210,15 +241,24 @@ export const api = {
       const response = await apiClient.get('/v1/user/identity-graph');
       return response.data;
     },
-    submitEvidence: async (evidence: EvidenceSubmissionRequest): Promise<void> => {
-      await apiClient.post('/v1/evidence', evidence);
+    submitEvidence: async (evidence: EvidenceSubmissionRequest): Promise<{ evidenceId: string }> => {
+      const response = await apiClient.post('/v1/evidence', evidence);
+      return response.data;
+    },
+    getEvidence: async (): Promise<EvidenceRecord[]> => {
+      const response = await apiClient.get('/v1/evidence');
+      return response.data;
+    },
+    getTraits: async (): Promise<Trait[]> => {
+      const response = await apiClient.get('/v1/traits');
+      return response.data;
     },
   },
 
   // Opportunity Management
   opportunities: {
     analyzeOpportunity: async (data: CreateOpportunityRequest): Promise<CreateOpportunityResponse> => {
-      const response = await apiClient.post('/v1/opportunities', data);
+      const response = await apiClient.post('/v1/opportunities/analyze', data);
       return response.data;
     },
     getOpportunity: async (opportunityId: string): Promise<Opportunity> => {
@@ -262,50 +302,64 @@ export const api = {
     },
   },
 
-  // MCP Tools (for the Generate, Review, Refine flow)
+  // MCP Tools - using actual available tools from the backend
   mcp: {
-    analyzeOpportunity: async (opportunityText: string): Promise<any> => {
-      const response = await apiClient.post('/mcp/tools/analyze_opportunity', {
-        tool_name: 'analyze_opportunity',
-        arguments: { opportunity_text: opportunityText }
+    // Extract traits from resume text
+    extractResumeTraits: async (resumeText: string): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/extract_resume_traits', {
+        args: { resume_text: resumeText }
       });
       return response.data;
     },
-    generateSolution: async (opportunityId: string): Promise<any> => {
-      const response = await apiClient.post('/mcp/tools/generate_solution', {
-        tool_name: 'generate_solution',
-        arguments: { opportunity_id: opportunityId }
+    
+    // Extract traits from story/narrative text
+    extractStoryTraits: async (storyText: string): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/extract_story_traits', {
+        args: { story_text: storyText }
       });
       return response.data;
     },
-    refineSolution: async (solutionId: string, refinementInstruction: string): Promise<any> => {
-      const response = await apiClient.post('/mcp/tools/refine_solution', {
-        tool_name: 'refine_solution',
-        arguments: { 
-          solution_id: solutionId,
-          refinement_instruction: refinementInstruction 
+    
+    // Analyze job posting (uses opportunity analysis endpoint)
+    analyzeJobPosting: async (jobPostingText: string, jobUrl?: string): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/analyze_job_posting', {
+        args: { 
+          job_posting_text: jobPostingText,
+          job_url: jobUrl || ""
         }
       });
       return response.data;
     },
-    formatAsCoverLetter: async (solutionId: string): Promise<FormatSolutionResponse> => {
-      const response = await apiClient.post('/mcp/tools/format_as_cover_letter', {
-        tool_name: 'format_as_cover_letter',
-        arguments: { solution_id: solutionId }
+    
+    // Enhanced opportunity analysis
+    enhanceOpportunityAnalysis: async (opportunityId: string, focusAreas?: string[]): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/enhance_opportunity_analysis', {
+        args: { 
+          opportunity_id: opportunityId,
+          focus_areas: focusAreas || []
+        }
       });
       return response.data;
     },
-    formatAsResume: async (solutionId: string): Promise<FormatSolutionResponse> => {
-      const response = await apiClient.post('/mcp/tools/format_as_resume', {
-        tool_name: 'format_as_resume',
-        arguments: { solution_id: solutionId }
+    
+    // Compare multiple opportunities
+    compareOpportunities: async (opportunityIds: string[], comparisonCriteria?: string[]): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/compare_opportunities', {
+        args: { 
+          opportunity_ids: opportunityIds,
+          comparison_criteria: comparisonCriteria || []
+        }
       });
       return response.data;
     },
-    formatAsLinkedInPost: async (solutionId: string): Promise<FormatSolutionResponse> => {
-      const response = await apiClient.post('/mcp/tools/format_as_linkedin_post', {
-        tool_name: 'format_as_linkedin_post',
-        arguments: { solution_id: solutionId }
+    
+    // Generate application strategy
+    generateApplicationStrategy: async (opportunityId: string, applicationType: 'resume' | 'cover_letter' | 'interview_prep' | 'portfolio'): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/generate_application_strategy', {
+        args: { 
+          opportunity_id: opportunityId,
+          application_type: applicationType
+        }
       });
       return response.data;
     },

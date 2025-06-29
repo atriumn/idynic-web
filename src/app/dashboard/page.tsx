@@ -5,9 +5,8 @@ import { api } from '@/lib/api';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/lib/auth';
-import { Plus, Upload, Search, User, LogOut, Key, FileText, HelpCircle, Code } from 'lucide-react';
+import { Header } from '@/components/header';
+import { Upload, Search, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { FeedEvidenceModal } from '@/components/feed-evidence-modal';
 import { AnalyzeOpportunityModal } from '@/components/analyze-opportunity-modal';
@@ -15,7 +14,6 @@ import { Footer } from '@/components/footer';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { logout, user } = useAuth();
   const [feedEvidenceOpen, setFeedEvidenceOpen] = useState(false);
   const [analyzeOpportunityOpen, setAnalyzeOpportunityOpen] = useState(false);
 
@@ -24,34 +22,29 @@ export default function DashboardPage() {
     queryFn: api.identity.getIdentityGraph,
   });
 
-  const { data: opportunities, isLoading: opportunitiesLoading } = useQuery({
-    queryKey: ['opportunities'],
-    queryFn: api.opportunities.getUserOpportunities,
-  });
-
-  const { data: solutions, isLoading: solutionsLoading } = useQuery({
-    queryKey: ['solutions'],
-    queryFn: api.solutions.getUserSolutions,
-  });
-
-  // Mock trait constellation data - replace with actual data from identity
-  const traitCategories = [
-    { name: 'Technical Skills', count: 12, color: 'bg-blue-500' },
-    { name: 'Leadership', count: 8, color: 'bg-green-500' },
-    { name: 'Communication', count: 6, color: 'bg-purple-500' },
-    { name: 'Problem Solving', count: 10, color: 'bg-orange-500' },
-    { name: 'Domain Expertise', count: 15, color: 'bg-red-500' },
-  ];
-
-  const evidenceCount = identity?.evidence_count || 0;
+  // Get real trait data and categorize by strength
+  const traits = identity?.traits || [];
+  const evidenceCount = identity?.evidenceCount || 0;
   
-  // Creative identity strength descriptor  
+  // Categorize traits by confidence level
+  const strongTraits = traits.filter(t => t.weight >= 0.8);
+  const moderateTraits = traits.filter(t => t.weight >= 0.6 && t.weight < 0.8);
+  const emergingTraits = traits.filter(t => t.weight < 0.6);
+  
+  const traitCategories = [
+    { name: 'Strong Skills', count: strongTraits.length, color: 'from-green-500 to-emerald-600', bgColor: 'bg-gradient-to-br from-green-500 to-emerald-600' },
+    { name: 'Moderate Skills', count: moderateTraits.length, color: 'from-yellow-500 to-amber-600', bgColor: 'bg-gradient-to-br from-yellow-500 to-amber-600' },
+    { name: 'Mentioned Skills', count: emergingTraits.length, color: 'from-gray-500 to-slate-600', bgColor: 'bg-gradient-to-br from-gray-500 to-slate-600' },
+    { name: 'Total Skills', count: traits.length, color: 'from-blue-500 to-indigo-600', bgColor: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
+  ];
+  
+  // Identity development stages
   const getIdentityDepth = (count: number) => {
-    if (count === 0) return { label: 'Emerging', description: 'Your identity is taking shape', icon: '🌱' };
-    if (count <= 2) return { label: 'Developing', description: 'Building your foundation', icon: '🌿' };
-    if (count <= 5) return { label: 'Growing', description: 'Your story is expanding', icon: '🌳' };
-    if (count <= 10) return { label: 'Flourishing', description: 'Rich and multifaceted', icon: '🌲' };
-    return { label: 'Deep-rooted', description: 'Complex and well-established', icon: '🏔️' };
+    if (count === 0) return { label: 'Foundation', description: 'The beginning of something significant', icon: '🌰' };
+    if (count <= 2) return { label: 'Emerging', description: 'Patterns starting to crystallize', icon: '🌱' };
+    if (count <= 5) return { label: 'Developing', description: 'Distinct characteristics taking shape', icon: '🌸' };
+    if (count <= 10) return { label: 'Established', description: 'Strong, defined professional identity', icon: '🌳' };
+    return { label: 'Mastery', description: 'Deep, interconnected expertise', icon: '🌲' };
   };
   
   const identityDepth = getIdentityDepth(evidenceCount);
@@ -59,216 +52,176 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Idynic Dashboard</h1>
-                <p className="text-gray-600">Track your strategic identity and opportunities</p>
-              </div>
-              <div className="flex items-center gap-6">
-                {/* Navigation Links */}
-                <nav className="hidden md:flex items-center gap-4">
-                  <Link href="/about" className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                    <HelpCircle className="h-4 w-4" />
-                    What is Idynic?
-                  </Link>
-                  <Link href="/docs" className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                    <FileText className="h-4 w-4" />
-                    Docs
-                  </Link>
-                  <Link href="/api-docs" className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                    <Code className="h-4 w-4" />
-                    API
-                  </Link>
-                </nav>
-                
-                {/* User Info */}
+        <Header />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-12 gap-8">
+            {/* Left Sidebar - Progress & Actions */}
+            <div className="col-span-12 lg:col-span-4 space-y-6">
+              {/* Progress Indicator */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border">
                 <div className="flex items-center gap-4">
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    {evidenceCount > 0 ? `${evidenceCount} Evidence Pieces` : 'Building Identity'}
-                  </Badge>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Signed in as {user?.attributes?.email || user?.username || 'user@example.com'}
-                    </span>
-                    <Button variant="outline" onClick={logout} className="flex items-center gap-2">
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </Button>
+                  <div className="text-3xl">{identityDepth.icon}</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg">{identityDepth.label}</h3>
+                    <p className="text-sm text-gray-600">{identityDepth.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {evidenceCount > 0 ? `${evidenceCount} contributions` : 'Ready to begin'}
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Identity Completion */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Identity Strength
-                  </CardTitle>
-                  <CardDescription>
-                    Build a stronger profile by adding more evidence
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center space-y-3">
-                      <div className="text-4xl">{identityDepth.icon}</div>
-                      <div>
-                        <h3 className="font-semibold text-lg">{identityDepth.label}</h3>
-                        <p className="text-sm text-gray-600">{identityDepth.description}</p>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {evidenceCount > 0 ? `${evidenceCount} pieces of evidence` : 'Ready to add your first evidence'}
-                      </div>
+              {/* Action Cards */}
+              <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <div className="relative">
+                      <Upload className="h-8 w-8 text-emerald-600" />
+                      <Sparkles className="h-4 w-4 absolute -top-1 -right-1 text-yellow-500 animate-pulse" />
                     </div>
-                    <Button 
-                      onClick={() => setFeedEvidenceOpen(true)}
-                      className="w-full flex items-center gap-2"
-                    >
-                      <Upload className="h-4 w-4" />
-                      Feed Your Identity
-                    </Button>
+                    <div>
+                      <h3 className="font-semibold mb-2 text-gray-900">Grow Your Identity</h3>
+                      <p className="text-sm text-gray-600 mb-4">Share your experiences to cultivate your unique profile</p>
+                      <Button 
+                        onClick={() => setFeedEvidenceOpen(true)}
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        size="sm"
+                      >
+                        Add Your Story
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Trait Constellation */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Trait Constellation</CardTitle>
-                  <CardDescription>
-                    Your unique combination of skills and attributes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {identityLoading ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="mt-2 text-gray-600">Loading identity data...</p>
+              <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <Search className="h-8 w-8 text-blue-600" />
+                    <div>
+                      <h3 className="font-semibold mb-2 text-gray-900">Analyze Opportunities</h3>
+                      <p className="text-sm text-gray-600 mb-4">Evaluate job postings and discover strategic advantages</p>
+                      <Button 
+                        onClick={() => setAnalyzeOpportunityOpen(true)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Explore Match
+                      </Button>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {traitCategories.map((category) => (
-                        <div key={category.name} className="text-center p-4 rounded-lg border">
-                          <div className={`w-16 h-16 mx-auto rounded-full ${category.color} flex items-center justify-center text-white font-bold text-lg mb-2`}>
-                            {category.count}
-                          </div>
-                          <h3 className="font-medium text-sm text-gray-900">{category.name}</h3>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
-
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>
-                    Your latest opportunities and solutions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {opportunitiesLoading ? (
-                      <p className="text-gray-600">Loading opportunities...</p>
-                    ) : opportunities && opportunities.length > 0 ? (
-                      opportunities.slice(0, 3).map((opportunity) => (
-                        <div key={opportunity.opportunityId} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <h4 className="font-medium">{opportunity.analysisData.basic_info.job_title}</h4>
-                            <p className="text-sm text-gray-600">{opportunity.analysisData.basic_info.company_name}</p>
+              
+              {/* Top Skills Preview */}
+              {traits.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Top Skills</CardTitle>
+                    <CardDescription>Your strongest identified capabilities</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {traits
+                        .sort((a, b) => b.weight - a.weight)
+                        .slice(0, 5)
+                        .map((trait, index) => (
+                          <div key={trait.trait} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                            <div className={`w-3 h-3 rounded-full ${
+                              trait.weight >= 0.8 ? 'bg-green-500' :
+                              trait.weight >= 0.6 ? 'bg-yellow-500' : 'bg-gray-400'
+                            }`} />
+                            <span className="text-sm font-medium flex-1 truncate">{trait.name}</span>
+                            <span className="text-xs text-gray-500">{Math.round(trait.weight * 100)}%</span>
                           </div>
-                          <Badge variant={opportunity.analysisStatus === 'COMPLETE' ? 'default' : 'secondary'}>
-                            {opportunity.analysisStatus}
-                          </Badge>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-600">No opportunities yet. Analyze your first opportunity!</p>
+                        ))}
+                    </div>
+                    {traits.length > 5 && (
+                      <div className="mt-3 text-center">
+                        <Button variant="outline" size="sm" asChild className="w-full">
+                          <Link href="/identity">View All {traits.length} Skills →</Link>
+                        </Button>
+                      </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Quick Actions */}
-              <Card>
+            {/* Right Side - Recent Activity & Overview */}
+            <div className="col-span-12 lg:col-span-8">
+              <Card className="h-full">
                 <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    onClick={() => setAnalyzeOpportunityOpen(true)}
-                    className="w-full flex items-center gap-2"
-                    variant="outline"
-                  >
-                    <Search className="h-4 w-4" />
-                    Analyze Opportunity
-                  </Button>
-                  <Button 
-                    onClick={() => setFeedEvidenceOpen(true)}
-                    className="w-full flex items-center gap-2"
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Feed Identity
-                  </Button>
-                  <Link href="/api-keys">
-                    <Button 
-                      className="w-full flex items-center gap-2"
-                      variant="outline"
-                    >
-                      <Key className="h-4 w-4" />
-                      Manage API Keys
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* Solutions Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Solutions</CardTitle>
+                  <CardTitle>Identity Overview</CardTitle>
                   <CardDescription>
-                    Generated solutions and exports
+                    Your professional profile and skill development
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {solutionsLoading ? (
-                    <p className="text-gray-600">Loading solutions...</p>
-                  ) : solutions && solutions.length > 0 ? (
-                    <div className="space-y-3">
-                      {solutions.slice(0, 3).map((solution) => (
-                        <div key={solution.solutionId} className="p-3 border rounded-lg">
-                          <h4 className="font-medium text-sm">
-                            {solution.title || 'Untitled Solution'}
-                          </h4>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {new Date(solution.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))}
-                      <Button variant="outline" size="sm" className="w-full">
-                        View All Solutions
+                <CardContent className="space-y-6">
+                  {identityLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="text-gray-500 mt-4">Loading your profile...</p>
+                    </div>
+                  ) : traits.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">🌱</div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Build Your Identity</h3>
+                      <p className="text-gray-600 mb-6">Submit your first evidence to start discovering your unique professional traits</p>
+                      <Button onClick={() => setFeedEvidenceOpen(true)}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Add Evidence
                       </Button>
                     </div>
                   ) : (
-                    <p className="text-gray-600 text-sm">No solutions yet.</p>
+                    <div className="space-y-6">
+                      {/* Skills Summary */}
+                      <div className="grid grid-cols-4 gap-4">
+                        {traitCategories.map((category) => (
+                          <div key={category.name} className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className={`w-12 h-12 mx-auto mb-2 rounded-full ${category.bgColor} flex items-center justify-center text-white font-bold`}>
+                              {category.count}
+                            </div>
+                            <h4 className="font-medium text-sm text-gray-900">{category.name}</h4>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Recent Skills Added */}
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-3">Recently Identified Skills</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {traits
+                            .sort((a, b) => b.lastObserved - a.lastObserved)
+                            .slice(0, 6)
+                            .map((trait) => (
+                              <div key={trait.trait} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  trait.weight >= 0.8 ? 'bg-green-500' :
+                                  trait.weight >= 0.6 ? 'bg-yellow-500' : 'bg-gray-400'
+                                }`} />
+                                <span className="font-medium text-sm flex-1">{trait.name}</span>
+                                <span className="text-xs text-gray-500">{Math.round(trait.weight * 100)}%</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="flex gap-3 pt-4 border-t">
+                        <Button asChild className="flex-1">
+                          <Link href="/identity">
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            View Full Identity Graph
+                          </Link>
+                        </Button>
+                        <Button variant="outline" onClick={() => setFeedEvidenceOpen(true)}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Add Evidence
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
