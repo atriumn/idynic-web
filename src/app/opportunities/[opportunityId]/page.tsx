@@ -94,6 +94,24 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
 
   const { analysisData } = opportunity;
 
+  if (!analysisData) {
+    return (
+      <ProtectedRoute>
+        <Header />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Analyzing Opportunity</h1>
+            <p className="text-gray-600 mb-4">Please wait while we analyze this job posting...</p>
+            <Link href="/opportunities">
+              <Button variant="outline">Back to Opportunities</Button>
+            </Link>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
       <Header />
@@ -127,25 +145,25 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold text-gray-900">
-                    {analysisData.basic_info.job_title}
+                    {analysisData?.basic_info?.job_title || 'Job Title Not Available'}
                   </h1>
                   <Badge variant="outline" className="text-sm">
-                    {analysisData.summary.seniority_level}
+                    {analysisData?.summary?.seniority_level || 'Not Specified'}
                   </Badge>
                 </div>
                 
                 <div className="flex items-center gap-6 text-gray-600 mb-4">
                   <div className="flex items-center gap-2">
                     <Building className="h-5 w-5" />
-                    <span className="text-lg font-medium">{analysisData.basic_info.company_name}</span>
+                    <span className="text-lg font-medium">{analysisData?.basic_info?.company_name || 'Company Not Available'}</span>
                   </div>
-                  {analysisData.basic_info.location && (
+                  {analysisData?.basic_info?.location && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-5 w-5" />
                       <span>{analysisData.basic_info.location}</span>
                     </div>
                   )}
-                  {analysisData.basic_info.employment_type && (
+                  {analysisData?.basic_info?.employment_type && (
                     <Badge variant="secondary">{analysisData.basic_info.employment_type}</Badge>
                   )}
                 </div>
@@ -155,13 +173,13 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                     <Calendar className="h-4 w-4" />
                     <span>Added {formatDistanceToNow(new Date(opportunity.createdAt))} ago</span>
                   </div>
-                  {analysisData.basic_info.salary_range && (
+                  {analysisData?.basic_info?.salary_range && (
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4" />
                       <span>{analysisData.basic_info.salary_range}</span>
                     </div>
                   )}
-                  {analysisData.basic_info.application_deadline && (
+                  {analysisData?.basic_info?.application_deadline && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
                       <span>Deadline: {analysisData.basic_info.application_deadline}</span>
@@ -206,7 +224,7 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                       Key Responsibilities
                     </h3>
                     <ul className="space-y-3">
-                      {analysisData.responsibilities.map((responsibility, index) => (
+                      {(analysisData?.responsibilities || []).map((responsibility, index) => (
                         <li key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                           <span className="text-blue-600 mt-1 font-bold text-lg">•</span>
                           <span className="text-gray-700 leading-relaxed">{responsibility}</span>
@@ -216,14 +234,14 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                   </div>
 
                   {/* Benefits */}
-                  {analysisData.benefits.length > 0 && (
+                  {(analysisData?.benefits || []).length > 0 && (
                     <div>
                       <h3 className="font-semibold text-lg mb-3 text-gray-900 flex items-center gap-2">
                         <Award className="h-5 w-5 text-yellow-600" />
                         Benefits & Perks
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {analysisData.benefits.map((benefit, index) => (
+                        {(analysisData?.benefits || []).map((benefit, index) => (
                           <div key={index} className="flex items-center gap-2 p-2 bg-yellow-50 rounded">
                             <span className="text-yellow-600">★</span>
                             <span className="text-sm text-gray-700">{benefit}</span>
@@ -248,7 +266,7 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                   <div>
                     <h3 className="font-semibold text-lg mb-3 text-gray-900">Required Skills</h3>
                     <div className="space-y-3">
-                      {analysisData.required_skills.filter(skill => skill.requirement_level === 'Required').map((skill, index) => (
+                      {(analysisData?.required_skills || []).filter(skill => skill?.requirement_level === 'Required').map((skill, index) => (
                         <div key={index} className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-100">
                           <div>
                             <span className="font-medium text-gray-900">{skill.skill_name}</span>
@@ -275,11 +293,11 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                   </div>
 
                   {/* Preferred Skills */}
-                  {analysisData.required_skills.filter(skill => skill.requirement_level === 'Preferred').length > 0 && (
+                  {(analysisData?.required_skills || []).filter(skill => skill?.requirement_level === 'Preferred').length > 0 && (
                     <div>
                       <h3 className="font-semibold text-lg mb-3 text-gray-900">Preferred Skills</h3>
                       <div className="space-y-3">
-                        {analysisData.required_skills.filter(skill => skill.requirement_level === 'Preferred').map((skill, index) => (
+                        {(analysisData?.required_skills || []).filter(skill => skill?.requirement_level === 'Preferred').map((skill, index) => (
                           <div key={index} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
                             <div>
                               <span className="font-medium text-gray-900">{skill.skill_name}</span>
@@ -307,14 +325,14 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                   )}
 
                   {/* Qualifications */}
-                  {(analysisData.qualifications.education || analysisData.qualifications.certifications || analysisData.qualifications.experience) && (
+                  {(analysisData?.qualifications?.education || analysisData?.qualifications?.certifications || analysisData?.qualifications?.experience) && (
                     <div>
                       <h3 className="font-semibold text-lg mb-3 text-gray-900">Qualifications</h3>
                       <div className="space-y-4">
-                        {analysisData.qualifications.education && (
+                        {analysisData?.qualifications?.education && (
                           <div className="p-4 bg-gray-50 rounded-lg">
                             <h4 className="font-medium text-gray-900 mb-2">Education</h4>
-                            {analysisData.qualifications.education.map((edu, index) => (
+                            {(analysisData?.qualifications?.education || []).map((edu, index) => (
                               <div key={index} className="text-sm text-gray-700">
                                 {edu.level} {edu.field && `in ${edu.field}`} ({edu.requirement_level})
                               </div>
@@ -322,27 +340,27 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                           </div>
                         )}
                         
-                        {analysisData.qualifications.experience && (
+                        {analysisData?.qualifications?.experience && (
                           <div className="p-4 bg-gray-50 rounded-lg">
                             <h4 className="font-medium text-gray-900 mb-2">Experience</h4>
                             <div className="text-sm text-gray-700 space-y-1">
-                              {analysisData.qualifications.experience.years_total && (
+                              {analysisData?.qualifications?.experience?.years_total && (
                                 <div>{analysisData.qualifications.experience.years_total}+ years total experience</div>
                               )}
-                              {analysisData.qualifications.experience.years_relevant && (
+                              {analysisData?.qualifications?.experience?.years_relevant && (
                                 <div>{analysisData.qualifications.experience.years_relevant}+ years relevant experience</div>
                               )}
-                              {analysisData.qualifications.experience.industries && (
+                              {analysisData?.qualifications?.experience?.industries && (
                                 <div>Industries: {analysisData.qualifications.experience.industries.join(', ')}</div>
                               )}
                             </div>
                           </div>
                         )}
 
-                        {analysisData.qualifications.certifications && (
+                        {analysisData?.qualifications?.certifications && (
                           <div className="p-4 bg-gray-50 rounded-lg">
                             <h4 className="font-medium text-gray-900 mb-2">Certifications</h4>
-                            {analysisData.qualifications.certifications.map((cert, index) => (
+                            {(analysisData?.qualifications?.certifications || []).map((cert, index) => (
                               <div key={index} className="text-sm text-gray-700">
                                 {cert.certification_name} ({cert.requirement_level})
                               </div>
@@ -356,7 +374,7 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
               </Card>
 
               {/* Company Culture */}
-              {analysisData.company_culture && (
+              {analysisData?.company_culture && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl">
@@ -365,11 +383,11 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {analysisData.company_culture.values && (
+                    {analysisData?.company_culture?.values && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Values</h4>
                         <div className="flex flex-wrap gap-2">
-                          {analysisData.company_culture.values.map((value, index) => (
+                          {(analysisData?.company_culture?.values || []).map((value, index) => (
                             <Badge key={index} variant="outline" className="text-sm">
                               {value}
                             </Badge>
@@ -377,13 +395,13 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                         </div>
                       </div>
                     )}
-                    {analysisData.company_culture.work_environment && (
+                    {analysisData?.company_culture?.work_environment && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Work Environment</h4>
                         <p className="text-gray-700">{analysisData.company_culture.work_environment}</p>
                       </div>
                     )}
-                    {analysisData.company_culture.team_size && (
+                    {analysisData?.company_culture?.team_size && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Team Size</h4>
                         <p className="text-gray-700">{analysisData.company_culture.team_size}</p>
@@ -434,7 +452,7 @@ export default function OpportunityPage({ params }: OpportunityPageProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {analysisData.summary.key_technologies.map((tech, index) => (
+                    {(analysisData?.summary?.key_technologies || []).map((tech, index) => (
                       <Badge key={index} variant="secondary" className="text-xs">
                         {tech}
                       </Badge>

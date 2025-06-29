@@ -302,7 +302,7 @@ export const api = {
     },
   },
 
-  // MCP Tools - using actual available tools from the backend
+  // MCP Tools - only actual available tools from the backend
   mcp: {
     // Extract traits from resume text
     extractResumeTraits: async (resumeText: string): Promise<any> => {
@@ -320,46 +320,67 @@ export const api = {
       return response.data;
     },
     
-    // Analyze job posting (uses opportunity analysis endpoint)
+    // Analyze job posting text and extract requirements
     analyzeJobPosting: async (jobPostingText: string, jobUrl?: string): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/analyze_job_posting', {
+      console.log('🌐 MCP API: Calling analyze_job_posting with:', {
+        job_posting_text: jobPostingText.substring(0, 100) + '...',
+        job_url: jobUrl || ""
+      });
+      
+      try {
+        const response = await mcpClient.post('/mcp/tools/analyze_job_posting', {
+          args: { 
+            job_posting_text: jobPostingText,
+            job_url: jobUrl || ""
+          }
+        });
+        
+        console.log('🌐 MCP API: Raw response:', response);
+        console.log('🌐 MCP API: Response data:', response.data);
+        console.log('🌐 MCP API: Response status:', response.status);
+        
+        return response.data;
+      } catch (error) {
+        console.error('🌐 MCP API: Request failed:', error);
+        if (error.response) {
+          console.error('🌐 MCP API: Error response:', error.response.data);
+          console.error('🌐 MCP API: Error status:', error.response.status);
+        }
+        throw error;
+      }
+    },
+    
+    // Generate a tailored solution for a specific opportunity
+    generateSolution: async (opportunityId: string): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/generate_solution', {
+        args: { opportunity_id: opportunityId }
+      });
+      return response.data;
+    },
+    
+    // Refine an existing solution based on feedback
+    refineSolution: async (solutionId: string, refinementInstruction: string): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/refine_solution', {
         args: { 
-          job_posting_text: jobPostingText,
-          job_url: jobUrl || ""
+          solution_id: solutionId,
+          refinement_instruction: refinementInstruction
         }
       });
       return response.data;
     },
     
-    // Enhanced opportunity analysis
-    enhanceOpportunityAnalysis: async (opportunityId: string, focusAreas?: string[]): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/enhance_opportunity_analysis', {
-        args: { 
-          opportunity_id: opportunityId,
-          focus_areas: focusAreas || []
-        }
+    // Format solution as a resume
+    formatAsResume: async (solutionId: string): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/format_as_resume', {
+        args: { solution_id: solutionId }
       });
       return response.data;
     },
     
-    // Compare multiple opportunities
-    compareOpportunities: async (opportunityIds: string[], comparisonCriteria?: string[]): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/compare_opportunities', {
-        args: { 
-          opportunity_ids: opportunityIds,
-          comparison_criteria: comparisonCriteria || []
-        }
-      });
-      return response.data;
-    },
-    
-    // Generate application strategy
-    generateApplicationStrategy: async (opportunityId: string, applicationType: 'resume' | 'cover_letter' | 'interview_prep' | 'portfolio'): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/generate_application_strategy', {
-        args: { 
-          opportunity_id: opportunityId,
-          application_type: applicationType
-        }
+    // Format solution as a cover letter
+    formatAsCoverLetter: async (solutionId: string): Promise<any> => {
+      const response = await mcpClient.post('/mcp/tools/format_as_cover_letter', {
+        args: { solution_id: solutionId }
       });
       return response.data;
     },

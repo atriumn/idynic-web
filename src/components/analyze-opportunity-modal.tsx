@@ -29,16 +29,55 @@ export function AnalyzeOpportunityModal({ open, onOpenChange }: AnalyzeOpportuni
   const router = useRouter();
 
   const analyzeOpportunityMutation = useMutation({
-    mutationFn: (data: { opportunity_url?: string; opportunity_text: string }) =>
-      api.opportunities.analyzeOpportunity(data),
-    onSuccess: (response) => {
+    mutationFn: async (data: { opportunity_url?: string; opportunity_text: string }) => {
+      console.log('🚀 Starting MCP analyze_job_posting call with data:', data);
+      
+      try {
+        // Call MCP analyze_job_posting tool which creates persistent opportunity
+        const mcpResponse = await api.mcp.analyzeJobPosting(data.opportunity_text, data.opportunity_url);
+        console.log('✅ MCP Response received:', mcpResponse);
+        
+        // Extract opportunity ID from MCP response text
+        // Response format: "Job posting analyzed! Opportunity ID: {opportunityId}"
+        let opportunityId = null;
+        if (mcpResponse?.content?.[0]?.text) {
+          console.log('📝 MCP Response text:', mcpResponse.content[0].text);
+          const match = mcpResponse.content[0].text.match(/Opportunity ID: (\S+)/);
+          opportunityId = match ? match[1] : null;
+          console.log('🔍 Extracted opportunity ID:', opportunityId);
+        } else {
+          console.log('❌ No content found in MCP response');
+        }
+        
+        return { mcpResponse, opportunityId };
+      } catch (error) {
+        console.error('💥 MCP API call failed:', error);
+        throw error;
+      }
+    },
+    onSuccess: ({ opportunityId, mcpResponse }) => {
+      console.log('🎉 Mutation success with opportunityId:', opportunityId);
+      console.log('📊 Full MCP response:', mcpResponse);
+      
       queryClient.invalidateQueries({ queryKey: ['opportunities'] });
       onOpenChange(false);
-      router.push(`/opportunities/${response.opportunityId}`);
+      
+      // Navigate to the created opportunity
+      if (opportunityId && opportunityId !== 'unknown') {
+        console.log('🧭 Navigating to opportunity:', `/opportunities/${opportunityId}`);
+        router.push(`/opportunities/${opportunityId}`);
+      } else {
+        console.log('🧭 Fallback navigation to opportunities list');
+        router.push('/opportunities');
+      }
+      
       // Reset form
       setInputMethod(null);
       setOpportunityUrl('');
       setOpportunityText('');
+    },
+    onError: (error) => {
+      console.error('❌ Mutation error:', error);
     },
   });
 
@@ -154,8 +193,13 @@ export function AnalyzeOpportunityModal({ open, onOpenChange }: AnalyzeOpportuni
               </div>
 
               {analyzeOpportunityMutation.error && (
-                <div className="text-sm text-red-600">
-                  Failed to analyze opportunity. Please try again.
+                <div className="p-3 rounded-md bg-red-50 border border-red-200">
+                  <p className="text-sm text-red-800 font-medium">
+                    Failed to analyze opportunity
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    Please check your connection and try again. If the problem persists, verify the job posting format.
+                  </p>
                 </div>
               )}
 
@@ -175,12 +219,12 @@ export function AnalyzeOpportunityModal({ open, onOpenChange }: AnalyzeOpportuni
                   {analyzeOpportunityMutation.isPending ? (
                     <>
                       <Zap className="h-4 w-4 mr-2 animate-pulse" />
-                      Discovering matches...
+                      Analyzing opportunity...
                     </>
                   ) : (
                     <>
                       <Target className="h-4 w-4 mr-2" />
-                      Discover Match
+                      Analyze & Add Opportunity
                     </>
                   )}
                 </Button>
