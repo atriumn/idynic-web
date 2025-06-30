@@ -84,6 +84,49 @@ authClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor for automatic token refresh on auth client too
+authClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url?.includes('/auth/me')) {
+      originalRequest._retry = true;
+      
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        try {
+          const response = await authClient.post('/auth/refresh', {
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+          });
+          
+          localStorage.setItem('access_token', response.data.access_token);
+          if (response.data.refresh_token) {
+            localStorage.setItem('refresh_token', response.data.refresh_token);
+          }
+          if (response.data.id_token) {
+            localStorage.setItem('id_token', response.data.id_token);
+          }
+          
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${response.data.access_token}`;
+          return authClient(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, clear tokens and redirect to login
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('id_token');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 export const authApi = {
   // User Authentication
   login: async (username: string, password: string): Promise<AuthenticationResult> => {

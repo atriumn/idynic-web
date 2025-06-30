@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, Key, LogOut, ChevronDown, FileText, Brain, Briefcase } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 export function Header() {
@@ -44,101 +44,70 @@ export function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
-          <div>
-            <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
-              <h1 className="text-2xl font-bold text-gray-900">Idynic Dashboard</h1>
-              <p className="text-gray-600">Track your strategic identity and opportunities</p>
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-white font-bold text-lg">I</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">Idynic</span>
             </Link>
           </div>
-          <div className="flex items-center gap-6">
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-4">
-              <Link 
-                href="/opportunities" 
-                className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <Briefcase className="h-4 w-4" />
-                <span className="font-medium">Opportunities</span>
-              </Link>
-              <Link 
-                href="/identity" 
-                className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <Brain className="h-4 w-4" />
-                <span className="font-medium">Identity</span>
-              </Link>
-            </nav>
+
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <Link href="/identity" className="text-gray-700 hover:text-gray-900 font-medium transition-colors">
+              Identity Graph
+            </Link>
+            <Link href="/tools" className="text-gray-700 hover:text-gray-900 font-medium transition-colors">
+              Tools
+            </Link>
+            <Link href="/opportunities" className="text-gray-700 hover:text-gray-900 font-medium transition-colors">
+              Opportunities
+            </Link>
+          </nav>
+          
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.attributes?.picture} alt={getUserDisplayName(user)} />
+                <AvatarFallback className="bg-blue-600 text-white text-sm font-medium">
+                  {getUserInitials(user)}
+                </AvatarFallback>
+              </Avatar>
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </DropdownMenuTrigger>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.attributes?.picture} alt={getUserDisplayName(user)} />
-                  <AvatarFallback className="bg-blue-600 text-white text-sm font-medium">
-                    {getUserInitials(user)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block text-left">
-                  <div className="text-sm font-medium text-gray-900">
-                    {getUserDisplayName(user)}
-                  </div>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{getUserDisplayName(user)}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{getUserEmail(user)}</p>
                 </div>
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              </DropdownMenuTrigger>
-              
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{getUserDisplayName(user)}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{getUserEmail(user)}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/opportunities" className="flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4" />
-                    <span>Job Tracker</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/identity" className="flex items-center">
-                    <Brain className="mr-2 h-4 w-4" />
-                    <span>Identity Graph</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/evidence" className="flex items-center">
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>Evidence Records</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/api-keys" className="flex items-center">
-                    <Key className="mr-2 h-4 w-4" />
-                    <span>API Keys</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={logout}
-                  variant="destructive"
-                  className="flex items-center"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/evidence">Evidence Records</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings">Settings</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/api-keys">API Keys</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={logout}
+                className="text-red-600 focus:text-red-600"
+              >
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

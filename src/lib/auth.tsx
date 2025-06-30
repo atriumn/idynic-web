@@ -40,6 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .then((userProfile) => {
           setUser(userProfile);
           setIsAuthenticated(true);
+          // Start proactive token refresh
+          startTokenRefreshTimer();
         })
         .catch(() => {
           // Token is invalid, try to refresh
@@ -52,6 +54,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   }, []);
+
+  // Proactive token refresh - refresh token 5 minutes before expiry
+  const startTokenRefreshTimer = () => {
+    // Refresh every 55 minutes (assuming 1 hour token expiry)
+    const refreshInterval = 55 * 60 * 1000; // 55 minutes in milliseconds
+    
+    const interval = setInterval(async () => {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken && isAuthenticated) {
+        try {
+          console.log('Proactively refreshing token...');
+          await handleRefreshToken();
+        } catch (error) {
+          console.error('Proactive token refresh failed:', error);
+          // Clear the interval if refresh fails
+          clearInterval(interval);
+        }
+      } else {
+        // No refresh token or not authenticated, clear interval
+        clearInterval(interval);
+      }
+    }, refreshInterval);
+
+    // Store interval ID to clear it later
+    return interval;
+  };
 
   const handleRefreshToken = async () => {
     const refreshToken = localStorage.getItem('refresh_token');
@@ -101,6 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userProfile = await authApi.getUserProfile();
       setUser(userProfile);
       setIsAuthenticated(true);
+      // Start proactive token refresh
+      startTokenRefreshTimer();
       router.push('/dashboard');
     } catch (error) {
       console.error('Login failed:', error);

@@ -28,8 +28,54 @@ const authInterceptor = (config: any) => {
   return config;
 };
 
+// Response interceptor for automatic token refresh
+const responseInterceptor = async (response: any) => {
+  return response;
+};
+
+const responseErrorInterceptor = async (error: any) => {
+  const originalRequest = error.config;
+  
+  if (error.response?.status === 401 && !originalRequest._retry) {
+    originalRequest._retry = true;
+    
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (refreshToken) {
+      try {
+        // Import authApi dynamically to avoid circular imports
+        const { authApi } = await import('./auth-api');
+        const response = await authApi.refreshToken(refreshToken);
+        
+        localStorage.setItem('access_token', response.access_token);
+        if (response.refresh_token) {
+          localStorage.setItem('refresh_token', response.refresh_token);
+        }
+        if (response.id_token) {
+          localStorage.setItem('id_token', response.id_token);
+        }
+        
+        // Retry the original request with new token
+        originalRequest.headers.Authorization = `Bearer ${response.access_token}`;
+        return axios(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, clear tokens and redirect to login
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('id_token');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+  }
+  
+  return Promise.reject(error);
+};
+
 apiClient.interceptors.request.use(authInterceptor);
 mcpClient.interceptors.request.use(authInterceptor);
+
+apiClient.interceptors.response.use(responseInterceptor, responseErrorInterceptor);
+mcpClient.interceptors.response.use(responseInterceptor, responseErrorInterceptor);
 
 // Types based on backend models
 export interface Identity {

@@ -23,7 +23,7 @@ export default function DashboardPage() {
   });
 
   // Get real trait data and categorize by strength
-  const traits = identity?.traits || [];
+  const traits = Array.isArray(identity?.traits) ? identity.traits : [];
   const evidenceCount = identity?.evidenceCount || 0;
   
   // Categorize traits by confidence level
@@ -51,183 +51,143 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen">
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-12 gap-8">
-            {/* Left Sidebar - Progress & Actions */}
-            <div className="col-span-12 lg:col-span-4 space-y-6">
-              {/* Progress Indicator */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border">
-                <div className="flex items-center gap-4">
-                  <div className="text-3xl">{identityDepth.icon}</div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-lg">{identityDepth.label}</h3>
-                    <p className="text-sm text-gray-600">{identityDepth.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {evidenceCount > 0 ? `${evidenceCount} contributions` : 'Ready to begin'}
-                    </p>
+        <main className="relative bg-gray-50 min-h-screen">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Left Column - Top Skills */}
+              <div className="space-y-6">
+                
+                {/* Top Skills */}
+                {traits.length > 0 && (
+                  <div className="bg-white rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900">Top Skills</h2>
+                      <Link href="/identity" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        View all →
+                      </Link>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {traits
+                        .sort((a, b) => b.weight - a.weight)
+                        .slice(0, 8)
+                        .map((trait) => (
+                          <div key={trait.trait} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className={`w-3 h-3 rounded-full ${
+                              trait.weight >= 0.8 ? 'bg-emerald-500' :
+                              trait.weight >= 0.6 ? 'bg-yellow-500' : 'bg-gray-400'
+                            }`} />
+                            <span className="font-medium text-sm text-gray-900 flex-1">{trait.name}</span>
+                            <span className="text-xs text-gray-500 font-mono">{Math.round(trait.weight * 100)}%</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Right Column - Quick Actions */}
+              <div className="space-y-6">
+                
+                {/* Quick Actions */}
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                  
+                  <div className="space-y-3">
+                    <button 
+                      onClick={() => setFeedEvidenceOpen(true)}
+                      className="w-full p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg text-left hover:from-blue-100 hover:to-purple-100 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Upload className="h-5 w-5 text-blue-600" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Add Experience</div>
+                          <div className="text-xs text-gray-500">Build your skill profile</div>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    <button 
+                      onClick={() => setAnalyzeOpportunityOpen(true)}
+                      className="w-full p-3 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-lg text-left hover:from-emerald-100 hover:to-green-100 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Search className="h-5 w-5 text-emerald-600" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Add Opportunity</div>
+                          <div className="text-xs text-gray-500">Track new opportunities</div>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    <Link 
+                      href="/identity"
+                      className="block w-full p-3 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg text-left hover:from-purple-100 hover:to-pink-100 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="h-5 w-5 text-purple-600" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">View Identity Graph</div>
+                          <div className="text-xs text-gray-500">Explore your skills</div>
+                        </div>
+                      </div>
+                    </Link>
                   </div>
                 </div>
               </div>
-
-              {/* Action Cards */}
-              <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className="relative">
-                      <Upload className="h-8 w-8 text-emerald-600" />
-                      <Sparkles className="h-4 w-4 absolute -top-1 -right-1 text-yellow-500 animate-pulse" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2 text-gray-900">Grow Your Identity</h3>
-                      <p className="text-sm text-gray-600 mb-4">Share your experiences to cultivate your unique profile</p>
-                      <Button 
-                        onClick={() => setFeedEvidenceOpen(true)}
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                        size="sm"
-                      >
-                        Add Your Story
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <Search className="h-8 w-8 text-blue-600" />
-                    <div>
-                      <h3 className="font-semibold mb-2 text-gray-900">Analyze Opportunities</h3>
-                      <p className="text-sm text-gray-600 mb-4">Evaluate job postings and discover strategic advantages</p>
-                      <Button 
-                        onClick={() => setAnalyzeOpportunityOpen(true)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        Explore Match
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Top Skills Preview */}
-              {traits.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Top Skills</CardTitle>
-                    <CardDescription>Your strongest identified capabilities</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {traits
-                        .sort((a, b) => b.weight - a.weight)
-                        .slice(0, 5)
-                        .map((trait, index) => (
-                          <div key={trait.trait} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                            <div className={`w-3 h-3 rounded-full ${
-                              trait.weight >= 0.8 ? 'bg-green-500' :
-                              trait.weight >= 0.6 ? 'bg-yellow-500' : 'bg-gray-400'
-                            }`} />
-                            <span className="text-sm font-medium flex-1 truncate">{trait.name}</span>
-                            <span className="text-xs text-gray-500">{Math.round(trait.weight * 100)}%</span>
-                          </div>
-                        ))}
-                    </div>
-                    {traits.length > 5 && (
-                      <div className="mt-3 text-center">
-                        <Button variant="outline" size="sm" asChild className="w-full">
-                          <Link href="/identity">View All {traits.length} Skills →</Link>
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Right Side - Recent Activity & Overview */}
-            <div className="col-span-12 lg:col-span-8">
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle>Identity Overview</CardTitle>
-                  <CardDescription>
-                    Your professional profile and skill development
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {identityLoading ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="text-gray-500 mt-4">Loading your profile...</p>
-                    </div>
-                  ) : traits.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-6xl mb-4">🌱</div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Build Your Identity</h3>
-                      <p className="text-gray-600 mb-6">Submit your first evidence to start discovering your unique professional traits</p>
-                      <Button onClick={() => setFeedEvidenceOpen(true)}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Add Evidence
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {/* Skills Summary */}
-                      <div className="grid grid-cols-4 gap-4">
-                        {traitCategories.map((category) => (
-                          <div key={category.name} className="text-center p-4 bg-gray-50 rounded-lg">
-                            <div className={`w-12 h-12 mx-auto mb-2 rounded-full ${category.bgColor} flex items-center justify-center text-white font-bold`}>
-                              {category.count}
-                            </div>
-                            <h4 className="font-medium text-sm text-gray-900">{category.name}</h4>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Recent Skills Added */}
-                      <div>
-                        <h3 className="font-medium text-gray-900 mb-3">Recently Identified Skills</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {traits
-                            .sort((a, b) => b.lastObserved - a.lastObserved)
-                            .slice(0, 6)
-                            .map((trait) => (
-                              <div key={trait.trait} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                <div className={`w-2 h-2 rounded-full ${
-                                  trait.weight >= 0.8 ? 'bg-green-500' :
-                                  trait.weight >= 0.6 ? 'bg-yellow-500' : 'bg-gray-400'
-                                }`} />
-                                <span className="font-medium text-sm flex-1">{trait.name}</span>
-                                <span className="text-xs text-gray-500">{Math.round(trait.weight * 100)}%</span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-
-                      {/* Quick Actions */}
-                      <div className="flex gap-3 pt-4 border-t">
-                        <Button asChild className="flex-1">
-                          <Link href="/identity">
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            View Full Identity Graph
-                          </Link>
-                        </Button>
-                        <Button variant="outline" onClick={() => setFeedEvidenceOpen(true)}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Add Evidence
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
-        </div>
+
+            {/* Empty State */}
+            {traits.length === 0 && !identityLoading && (
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl p-12 shadow-sm text-center">
+                  <div className="text-6xl mb-6">🌱</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Build Your Profile</h2>
+                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                    Add your first experience to start identifying your unique skills and strengths.
+                  </p>
+                  <button 
+                    onClick={() => setFeedEvidenceOpen(true)}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:shadow-lg transition-all duration-200"
+                  >
+                    <Upload className="h-5 w-5 mr-2 inline" />
+                    Add Your First Experience
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {identityLoading && (
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl p-12 shadow-sm text-center">
+                  <div className="w-16 h-16 mx-auto mb-6">
+                    <svg className="w-16 h-16 animate-spin" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="45" stroke="rgba(139, 92, 246, 0.2)" strokeWidth="8" fill="none" />
+                      <circle cx="50" cy="50" r="45" stroke="url(#loadingGradient)" strokeWidth="8" fill="none" strokeDasharray="70 210" strokeLinecap="round" />
+                      <defs>
+                        <linearGradient id="loadingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#8B5CF6" />
+                          <stop offset="100%" stopColor="#06B6D4" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Analyzing Your Profile</h2>
+                  <p className="text-gray-600">Discovering your skills and strengths...</p>
+                </div>
+              </div>
+            )}
+        </main>
 
         {/* Modals */}
         <FeedEvidenceModal 

@@ -15,6 +15,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useState } from 'react';
 import { AnalyzeOpportunityModal } from '@/components/analyze-opportunity-modal';
 import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
 
 export default function OpportunitiesPage() {
   const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
@@ -79,32 +80,65 @@ export default function OpportunitiesPage() {
 
   return (
     <ProtectedRoute>
-      <Header />
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between py-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Job Tracker</h1>
-                <p className="mt-1 text-gray-600">Manage and track your opportunities</p>
+      <div className="min-h-screen">
+        <Header />
+        
+        <main className="relative bg-gray-50 min-h-screen">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+                    <div className="text-sm text-gray-600">Total</div>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Briefcase className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
               </div>
-              <Button 
-                onClick={() => setShowAnalyzeModal(true)}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Opportunity
-              </Button>
+              
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">{stats.total - stats.applied}</div>
+                    <div className="text-sm text-gray-600">Interested</div>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                    <span className="text-yellow-600 font-bold">👀</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">{stats.applied}</div>
+                    <div className="text-sm text-gray-600">Applied</div>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                    <span className="text-green-600 font-bold">✓</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">0</div>
+                    <div className="text-sm text-gray-600">Archived</div>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                    <span className="text-gray-600 font-bold">📁</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          {/* Filter Bar */}
-          <Card className="mb-6">
-            <CardContent className="p-4">
+            {/* Filter Bar */}
+            <div className="bg-white rounded-xl p-4 shadow-sm mb-6">
               <div className="flex items-center gap-4">
                 <Filter className="h-5 w-5 text-gray-400" />
                 <div className="flex gap-2 flex-wrap">
@@ -126,20 +160,18 @@ export default function OpportunitiesPage() {
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Opportunities List */}
-          {filteredOpportunities.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            {/* Opportunities List */}
+            {filteredOpportunities.length === 0 ? (
+              <div className="bg-white rounded-xl p-12 shadow-sm text-center">
+                <div className="text-6xl mb-6">📋</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   {opportunities?.length === 0 ? 'No opportunities yet' : 'No opportunities match your filter'}
                 </h3>
                 <p className="text-gray-600 mb-6">
                   {opportunities?.length === 0 
-                    ? 'Start by analyzing job opportunities that interest you'
+                    ? 'Start tracking opportunities that interest you'
                     : 'Try adjusting your filter to see more opportunities'
                   }
                 </p>
@@ -149,56 +181,56 @@ export default function OpportunitiesPage() {
                     Add Your First Opportunity
                   </Button>
                 )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-0.5">
-              {filteredOpportunities.map((item) => {
-                // Handle nested structure
-                const opportunity = item.opportunity || item;
-                const analysisData = opportunity.analysisData;
-                
-                return (
-                  <Link key={opportunity.opportunityId} href={`/opportunities/${opportunity.opportunityId}`}>
-                    <div className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer border border-gray-200 rounded">
-                      <div className="px-3 py-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <span className="font-medium text-gray-900">
-                              {analysisData?.basic_info?.job_title || 'Job Title Not Available'}
-                            </span>
-                            <span className="text-gray-600 mx-2">at</span>
-                            <span className="text-gray-900">
-                              {analysisData?.basic_info?.company_name || 'Company Not Available'}
-                            </span>
-                            {analysisData?.basic_info?.location && (
-                              <>
-                                <span className="text-gray-400 mx-2">•</span>
-                                <span className="text-gray-600 text-sm">{analysisData.basic_info.location}</span>
-                              </>
-                            )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="divide-y divide-gray-200">
+                  {filteredOpportunities.map((item) => {
+                    // Handle nested structure
+                    const opportunity = item.opportunity || item;
+                    const analysisData = opportunity.analysisData;
+                    
+                    return (
+                      <Link key={opportunity.opportunityId} href={`/opportunities/${opportunity.opportunityId}`}>
+                        <div className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 text-lg">
+                                {analysisData?.basic_info?.job_title || 'Job Title Not Available'}
+                              </div>
+                              <div className="text-gray-600 mt-1">
+                                {analysisData?.basic_info?.company_name || 'Company Not Available'}
+                                {analysisData?.basic_info?.location && (
+                                  <span className="text-gray-400"> • {analysisData.basic_info.location}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs text-gray-500">
+                                {opportunity.createdAt 
+                                  ? (() => {
+                                      try {
+                                        return formatDistanceToNow(new Date(opportunity.createdAt)) + ' ago';
+                                      } catch {
+                                        return 'recently';
+                                      }
+                                    })()
+                                  : 'recently'
+                                }
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-xs text-gray-500 ml-4">
-                            {opportunity.createdAt 
-                              ? (() => {
-                                  try {
-                                    return formatDistanceToNow(new Date(opportunity.createdAt)) + ' ago';
-                                  } catch {
-                                    return 'recently';
-                                  }
-                                })()
-                              : 'recently'
-                            }
-                          </span>
                         </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+        
+        <Footer />
       </div>
 
       {/* Add Opportunity Modal */}
