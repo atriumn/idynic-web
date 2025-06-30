@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import {
@@ -14,12 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, BookOpen, Lightbulb, ArrowRight } from 'lucide-react';
+import { FileText, BookOpen, Lightbulb, ArrowRight, Upload, X, FileCheck } from 'lucide-react';
 
 interface FeedEvidenceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
 
 const evidenceTypes = [
   {
@@ -28,7 +29,7 @@ const evidenceTypes = [
     description: 'Share your professional journey and achievements',
     icon: FileText,
     fields: [
-      { key: 'resume_text', label: 'Resume Content', type: 'textarea', placeholder: 'Paste your resume content here...' }
+      { key: 'resume_text', label: 'Resume Content', type: 'textarea', placeholder: 'Upload a PDF file or paste your resume content here...', supportsPDF: true }
     ]
   },
   {
@@ -56,6 +57,9 @@ export function FeedEvidenceModal({ open, onOpenChange }: FeedEvidenceModalProps
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [showStoryExamples, setShowStoryExamples] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isProcessingPDF, setIsProcessingPDF] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Rotate through example stories every 4 seconds in the story examples modal
@@ -106,6 +110,88 @@ export function FeedEvidenceModal({ open, onOpenChange }: FeedEvidenceModalProps
 
   const handleInputChange = (key: string, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const extractTextFromPDF = useCallback(async (file: File): Promise<string> => {
+    try {
+      // Dynamically import PDF.js only when needed (client-side)
+      const pdfjsLib = await import('pdfjs-dist');
+      
+      // Configure worker to use local file
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+      
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n';
+      }
+      
+      return fullText.trim();
+    } catch (error) {
+      console.error('Error extracting PDF text:', error);
+      throw new Error('Failed to extract text from PDF. Please try pasting the text manually.');
+    }
+  }, []);
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a PDF file.');
+      return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      alert('File is too large. Please upload a file smaller than 10MB.');
+      return;
+    }
+
+    setIsProcessingPDF(true);
+    setUploadedFileName(file.name);
+    
+    try {
+      const extractedText = await extractTextFromPDF(file);
+      handleInputChange('resume_text', extractedText);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to process PDF');
+      setUploadedFileName(null);
+    } finally {
+      setIsProcessingPDF(false);
+    }
+  }, [extractTextFromPDF]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const pdfFile = files.find(file => file.type === 'application/pdf');
+    
+    if (pdfFile) {
+      handleFileUpload(pdfFile);
+    } else {
+      alert('Please drop a PDF file.');
+    }
+  }, [handleFileUpload]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const clearUploadedFile = () => {
+    setUploadedFileName(null);
+    handleInputChange('resume_text', '');
   };
 
   const selectedEvidenceType = evidenceTypes.find(type => type.id === selectedType);
@@ -187,13 +273,85 @@ export function FeedEvidenceModal({ open, onOpenChange }: FeedEvidenceModalProps
                   <div key={field.key} className="space-y-2">
                     <Label htmlFor={field.key}>{field.label}</Label>
                     {field.type === 'textarea' ? (
-                      <textarea
-                        id={field.key}
-                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder={field.placeholder}
-                        value={formData[field.key] || ''}
-                        onChange={(e) => handleInputChange(field.key, e.target.value)}
-                      />
+                      <div className="space-y-3">
+                        {/* PDF Upload Area - only show for resume */}
+                        {field.supportsPDF && (
+                          <div
+                            className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
+                              isDragOver 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                            onDrop={handleDrop}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                          >
+                            {isProcessingPDF ? (
+                              <div className="flex flex-col items-center justify-center text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                                <p className="text-sm text-gray-600">Extracting text from PDF...</p>
+                              </div>
+                            ) : uploadedFileName ? (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <FileCheck className="h-8 w-8 text-green-600" />
+                                  <div>
+                                    <p className="font-medium text-gray-900">{uploadedFileName}</p>
+                                    <p className="text-sm text-gray-600">Text extracted successfully</p>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={clearUploadedFile}
+                                  className="flex items-center gap-2"
+                                >
+                                  <X className="h-4 w-4" />
+                                  Remove
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center text-center">
+                                <Upload className="h-8 w-8 text-gray-400 mb-3" />
+                                <p className="text-sm font-medium text-gray-900 mb-1">
+                                  Drop your PDF here or click to upload
+                                </p>
+                                <p className="text-xs text-gray-500 mb-3">
+                                  Supports PDF files up to 10MB
+                                </p>
+                                <input
+                                  type="file"
+                                  accept=".pdf"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleFileUpload(file);
+                                  }}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <Button type="button" variant="outline" size="sm">
+                                  Choose File
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Text Area */}
+                        <textarea
+                          id={field.key}
+                          className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder={uploadedFileName ? 'Edit the extracted text if needed...' : field.placeholder}
+                          value={formData[field.key] || ''}
+                          onChange={(e) => handleInputChange(field.key, e.target.value)}
+                        />
+                        
+                        {formData[field.key] && (
+                          <p className="text-xs text-gray-500">
+                            {formData[field.key].length} characters
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <Input
                         id={field.key}
