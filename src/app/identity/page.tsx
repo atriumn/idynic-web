@@ -203,9 +203,9 @@ function IdentityGraphPageContent() {
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Skills</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {topTraits.slice(0, 6).map((trait) => (
+                  {topTraits.slice(0, 6).map((trait, index) => (
                     <div
-                      key={trait.trait}
+                      key={trait.trait || trait.name || `trait-${index}`}
                       className="flex flex-col items-center p-3 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border"
                     >
                       <div 
@@ -247,8 +247,8 @@ function IdentityGraphPageContent() {
                     selectedCategory === 'strong' ? strong :
                     selectedCategory === 'moderate' ? moderate : emerging
                     : traits.sort((a, b) => b.weight - a.weight)
-                  ).map((trait) => (
-                    <div key={trait.trait} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  ).map((trait, index) => (
+                    <div key={trait.trait || trait.name || `trait-${index}`} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{trait.name}</h4>
                         <p className="text-sm text-gray-600 mt-1">{trait.evidence}</p>

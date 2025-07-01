@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { 
   Wrench,
   Download,
-  Chrome,
   Terminal,
   FileText,
   ExternalLink,
   Clock
 } from 'lucide-react';
+import { ClaudeIcon, ChromeIcon, LinkedInIcon, GitHubIcon } from '@/components/brand-icons';
 import Link from 'next/link';
 
 export default function ToolsPage() {
@@ -42,8 +42,8 @@ export default function ToolsPage() {
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <Download className="h-6 w-6 text-white" />
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center">
+                      <ClaudeIcon className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Claude Desktop MCP</h3>
@@ -77,7 +77,7 @@ export default function ToolsPage() {
                 
                 <Link href="/tools/claude-mcp">
                   <Button className="w-full">
-                    <Download className="h-4 w-4 mr-2" />
+                    <ClaudeIcon className="h-4 w-4 mr-2" />
                     Setup Guide
                   </Button>
                 </Link>
@@ -87,8 +87,8 @@ export default function ToolsPage() {
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 opacity-75">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-                      <Chrome className="h-6 w-6 text-white" />
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center">
+                      <ChromeIcon className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Chrome Extension</h3>
@@ -122,7 +122,7 @@ export default function ToolsPage() {
                 </div>
                 
                 <Button className="w-full" variant="outline" disabled>
-                  <Chrome className="h-4 w-4 mr-2" />
+                  <ChromeIcon className="h-4 w-4 mr-2" />
                   Coming Soon
                 </Button>
               </div>
@@ -176,7 +176,7 @@ export default function ToolsPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
-                      <ExternalLink className="h-6 w-6 text-white" />
+                      <LinkedInIcon className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">LinkedIn Integration</h3>
@@ -210,7 +210,7 @@ export default function ToolsPage() {
                 </div>
                 
                 <Button className="w-full" variant="outline" disabled>
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <LinkedInIcon className="h-4 w-4 mr-2" />
                   Coming Soon
                 </Button>
               </div>
@@ -220,7 +220,7 @@ export default function ToolsPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                      <Terminal className="h-6 w-6 text-white" />
+                      <GitHubIcon className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">GitHub Integration</h3>
@@ -254,7 +254,7 @@ export default function ToolsPage() {
                 </div>
                 
                 <Button className="w-full" variant="outline" disabled>
-                  <Terminal className="h-4 w-4 mr-2" />
+                  <GitHubIcon className="h-4 w-4 mr-2" />
                   Coming Soon
                 </Button>
               </div>
@@ -325,6 +325,7 @@ export default function ToolsPage() {
                 
                 <a href="https://github.com/idynic" target="_blank" rel="noopener noreferrer" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-2 font-medium text-gray-900 mb-1">
+                    <GitHubIcon className="h-4 w-4" />
                     GitHub Repository
                     <ExternalLink className="h-3 w-3" />
                   </div>

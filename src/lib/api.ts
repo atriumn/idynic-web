@@ -299,6 +299,10 @@ export const api = {
       const response = await apiClient.get('/v1/traits');
       return response.data;
     },
+    getTrait: async (traitCode: string): Promise<Trait> => {
+      const response = await apiClient.get(`/v1/traits/${encodeURIComponent(traitCode)}`);
+      return response.data;
+    },
   },
 
   // Opportunity Management
