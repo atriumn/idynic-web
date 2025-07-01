@@ -43,6 +43,15 @@ function IdentityGraphPageContent() {
     queryFn: api.identity.getIdentityGraph,
   });
 
+  // Debug logging
+  console.log('🔍 Identity Graph Debug:', {
+    isLoading,
+    error,
+    identityGraph,
+    traitsCount: identityGraph?.traits?.length,
+    sampleTraits: identityGraph?.traits?.slice(0, 3)
+  });
+
   // Group traits by weight ranges for visualization
   const getTraitsByStrength = (traits: Trait[] | null | undefined) => {
     const validTraits = Array.isArray(traits) ? traits : [];
@@ -91,6 +100,18 @@ function IdentityGraphPageContent() {
   const traits = Array.isArray(rawTraits) ? rawTraits : [];
   const { strong, moderate, emerging } = getTraitsByStrength(traits);
   const topTraits = getTopTraits(traits);
+
+  // Debug trait categorization
+  console.log('📊 Trait Categorization Debug:', {
+    totalTraits: traits.length,
+    strong: strong.length,
+    moderate: moderate.length,
+    emerging: emerging.length,
+    strongTraits: strong.map(t => ({ name: t.name, weight: t.weight, code: t.trait })),
+    moderateTraits: moderate.map(t => ({ name: t.name, weight: t.weight, code: t.trait })),
+    emergingTraits: emerging.map(t => ({ name: t.name, weight: t.weight, code: t.trait })),
+    topTraits: topTraits.map(t => ({ name: t.name, weight: t.weight, code: t.trait }))
+  });
 
   return (
     <div>
@@ -205,7 +226,7 @@ function IdentityGraphPageContent() {
                 <div className="grid grid-cols-2 gap-3">
                   {topTraits.slice(0, 6).map((trait, index) => (
                     <div
-                      key={trait.trait || trait.name || `trait-${index}`}
+                      key={`${trait.trait}-${trait.name}-${index}`}
                       className="flex flex-col items-center p-3 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border"
                     >
                       <div 
@@ -248,7 +269,7 @@ function IdentityGraphPageContent() {
                     selectedCategory === 'moderate' ? moderate : emerging
                     : traits.sort((a, b) => b.weight - a.weight)
                   ).map((trait, index) => (
-                    <div key={trait.trait || trait.name || `trait-${index}`} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div key={`${trait.trait}-${trait.name}-${index}`} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{trait.name}</h4>
                         <p className="text-sm text-gray-600 mt-1">{trait.evidence}</p>

@@ -285,6 +285,13 @@ export const api = {
   identity: {
     getIdentityGraph: async (): Promise<Identity> => {
       const response = await apiClient.get('/v1/user/identity-graph');
+      console.log('🌐 API Response Debug:', {
+        status: response.status,
+        headers: response.headers,
+        data: response.data,
+        traitsInResponse: response.data?.traits?.length,
+        sampleTraitsFromAPI: response.data?.traits?.slice(0, 2)
+      });
       return response.data;
     },
     submitEvidence: async (evidence: EvidenceSubmissionRequest): Promise<{ evidenceId: string }> => {
