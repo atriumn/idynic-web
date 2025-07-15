@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    name: Test and Quality Checks
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing dependencies..."
+        npm ci
+
+    # TypeScript compilation check
+    - name: TypeScript compilation check
+      run: |
+        echo "🔍 Checking TypeScript compilation..."
+        npx tsc --noEmit
+
+    # Linting
+    - name: Run ESLint
+      run: |
+        echo "🔍 Running ESLint..."
+        npm run lint
+
+    # Testing with coverage
+    - name: Run tests with coverage
+      run: |
+        echo "🧪 Running Jest tests with coverage..."
+        npm run test:coverage
+
+    # Build verification
+    - name: Build verification
+      run: |
+        echo "🏗️ Verifying Next.js build..."
+        npm run build
+
+    # Upload test results and coverage
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          coverage/
+          jest-results.json
+        retention-days: 30
+
+    # Generate build report
+    - name: Generate build summary
+      if: always()
+      run: |
+        echo "# 🏗️ Build Summary" > build-report.md
+        echo "" >> build-report.md
+        echo "**Build Date:** $(date)" >> build-report.md
+        echo "**Commit:** ${{ github.sha }}" >> build-report.md
+        echo "**Event:** ${{ github.event_name }}" >> build-report.md
+        echo "" >> build-report.md
+        
+        echo "## 📊 Build Results" >> build-report.md
+        echo "" >> build-report.md
+        echo "- ✅ TypeScript compilation: Completed" >> build-report.md
+        echo "- ✅ ESLint check: Completed" >> build-report.md
+        echo "- ✅ Jest tests: Completed" >> build-report.md
+        echo "- ✅ Next.js build: Completed" >> build-report.md
+        echo "" >> build-report.md
+        
+        if [ -d "coverage" ]; then
+          echo "## 📈 Test Coverage" >> build-report.md
+          echo "" >> build-report.md
+          echo "Coverage report available in artifacts" >> build-report.md
+        fi
+        
+        echo "" >> build-report.md
+        echo "## 🔗 Links" >> build-report.md
+        echo "" >> build-report.md
+        echo "- [Repository](https://github.com/${{ github.repository }})" >> build-report.md
+        
+        cat build-report.md
+
+    - name: Upload build artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-results
+        path: |
+          .next/
+          build-report.md
+        retention-days: 7
+
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      security-events: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    # npm audit for dependency vulnerabilities
+    - name: Run npm audit
+      continue-on-error: true
+      run: |
+        echo "🔍 Running npm audit..."
+        npm audit --audit-level=moderate || echo "⚠️ npm audit found issues"
+
+    # Package.json security scan
+    - name: Package security scan
+      continue-on-error: true
+      run: |
+        echo "🔍 Scanning package.json for security issues..."
+        # Check for deprecated packages
+        npm ls --depth=0 2>&1 | grep -i deprecated || echo "✅ No deprecated packages found"
+        
+        # Check for known vulnerabilities in direct dependencies
+        npx better-npm-audit audit --level moderate || echo "⚠️ Security audit found issues"

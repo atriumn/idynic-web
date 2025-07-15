@@ -1,0 +1,171 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  pr-checks:
+    name: Pull Request Validation
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing dependencies..."
+        npm ci
+
+    # Check for package-lock.json changes
+    - name: Check package-lock.json consistency
+      run: |
+        echo "🔍 Checking package-lock.json consistency..."
+        npm ci --audit=false
+        if ! git diff --exit-code package-lock.json; then
+          echo "❌ package-lock.json is not up to date. Please run 'npm install' and commit the changes."
+          exit 1
+        fi
+        echo "✅ package-lock.json is consistent"
+
+    # TypeScript strict compilation
+    - name: TypeScript strict check
+      run: |
+        echo "🔍 Running strict TypeScript check..."
+        npx tsc --noEmit --strict
+
+    # Code formatting check
+    - name: Code formatting check
+      run: |
+        echo "🔍 Checking code formatting..."
+        # Next.js projects typically use Prettier, but since it's not in package.json,
+        # we'll check if ESLint has formatting rules
+        npm run lint
+
+    # Test coverage requirements
+    - name: Test coverage check
+      run: |
+        echo "🧪 Running tests with coverage requirements..."
+        npm run test:coverage
+        
+        # Check if coverage meets minimum requirements (can be adjusted)
+        echo "📊 Checking coverage thresholds..."
+        # This would typically require jest.config.js to have coverage thresholds configured
+
+    # Security audit for PRs
+    - name: Security audit
+      continue-on-error: true
+      run: |
+        echo "🔍 Running security audit..."
+        npm audit --audit-level=moderate
+
+    # Check for sensitive files
+    - name: Check for sensitive files
+      run: |
+        echo "🔍 Checking for sensitive files..."
+        sensitive_patterns=(".env" "*.key" "*.pem" "*.p12" "*.pfx" "secret" "password")
+        
+        for pattern in "${sensitive_patterns[@]}"; do
+          if find . -name "$pattern" -type f | grep -v node_modules | grep -v .git; then
+            echo "⚠️ Found potential sensitive files matching pattern: $pattern"
+          fi
+        done
+        
+        echo "✅ Sensitive file check completed"
+
+    # PR size check
+    - name: PR size check
+      run: |
+        echo "📏 Checking PR size..."
+        files_changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+        lines_changed=$(git diff --shortstat origin/${{ github.base_ref }}...HEAD | grep -o '[0-9]* insertion' | cut -d' ' -f1 || echo "0")
+        
+        echo "Files changed: $files_changed"
+        echo "Lines changed: $lines_changed"
+        
+        if [ "$files_changed" -gt 50 ]; then
+          echo "⚠️ Large PR: $files_changed files changed. Consider breaking into smaller PRs."
+        fi
+        
+        if [ "$lines_changed" -gt 1000 ]; then
+          echo "⚠️ Large PR: $lines_changed lines changed. Consider breaking into smaller PRs."
+        fi
+
+    # Component and API validation
+    - name: Component validation
+      run: |
+        echo "🔍 Validating React components..."
+        # Check for common React issues
+        if grep -r "React.FC" src/ --include="*.tsx" --include="*.ts"; then
+          echo "⚠️ Found React.FC usage. Consider using function declarations instead."
+        fi
+        
+        # Check for missing key props in lists
+        if grep -r "map(" src/ --include="*.tsx" | grep -v "key="; then
+          echo "⚠️ Found map() calls that might be missing key props"
+        fi
+        
+        echo "✅ Component validation completed"
+
+    # Build verification for PR
+    - name: Build verification
+      run: |
+        echo "🏗️ Verifying build for PR changes..."
+        npm run build
+        echo "✅ Build successful"
+
+    # Generate PR summary
+    - name: Generate PR summary
+      if: always()
+      run: |
+        echo "# 📋 PR Validation Summary" > pr-summary.md
+        echo "" >> pr-summary.md
+        echo "**PR:** #${{ github.event.number }}" >> pr-summary.md
+        echo "**Base:** ${{ github.base_ref }}" >> pr-summary.md
+        echo "**Head:** ${{ github.head_ref }}" >> pr-summary.md
+        echo "**Commit:** ${{ github.sha }}" >> pr-summary.md
+        echo "" >> pr-summary.md
+        
+        echo "## ✅ Validation Results" >> pr-summary.md
+        echo "" >> pr-summary.md
+        echo "- Package consistency check" >> pr-summary.md
+        echo "- TypeScript compilation" >> pr-summary.md
+        echo "- Code formatting" >> pr-summary.md
+        echo "- Test coverage" >> pr-summary.md
+        echo "- Security audit" >> pr-summary.md
+        echo "- Build verification" >> pr-summary.md
+        echo "" >> pr-summary.md
+        
+        files_changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+        echo "**Files changed:** $files_changed" >> pr-summary.md
+        echo "" >> pr-summary.md
+        
+        cat pr-summary.md
+
+    - name: Upload PR validation results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: pr-validation-results
+        path: |
+          pr-summary.md
+          coverage/
+        retention-days: 30

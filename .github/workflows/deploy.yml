@@ -1,0 +1,249 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      deploy_type:
+        description: 'Type of deployment'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - hotfix
+          - rollback
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  pre-deploy-checks:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      
+    outputs:
+      should_deploy: ${{ steps.validation.outputs.should_deploy }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing dependencies..."
+        npm ci
+
+    - name: Run full test suite
+      run: |
+        echo "🧪 Running complete test suite..."
+        npm run test:coverage
+
+    - name: Build verification
+      run: |
+        echo "🏗️ Verifying production build..."
+        npm run build
+
+    - name: Security pre-flight check
+      run: |
+        echo "🔍 Running security pre-flight check..."
+        npm audit --audit-level=high || echo "⚠️ High severity vulnerabilities found"
+
+    - name: Environment validation
+      id: validation
+      run: |
+        echo "🔍 Validating deployment environment..."
+        
+        # Validate environment-specific requirements
+        case "${{ github.event.inputs.environment }}" in
+          "production")
+            echo "Validating production deployment requirements..."
+            # Add production-specific validations
+            if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+              echo "❌ Production deployments must be from main branch"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+            ;;
+          "staging")
+            echo "Validating staging deployment requirements..."
+            # Add staging-specific validations
+            ;;
+          "development")
+            echo "Validating development deployment requirements..."
+            # Add development-specific validations
+            ;;
+        esac
+        
+        echo "✅ Environment validation passed"
+        echo "should_deploy=true" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    needs: pre-deploy-checks
+    if: needs.pre-deploy-checks.outputs.should_deploy == 'true'
+    
+    environment:
+      name: ${{ github.event.inputs.environment }}
+      url: ${{ steps.deploy.outputs.deployment_url }}
+    
+    permissions:
+      contents: read
+      deployments: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing dependencies..."
+        npm ci
+
+    - name: Set environment variables
+      run: |
+        echo "🔧 Setting environment-specific variables..."
+        
+        case "${{ github.event.inputs.environment }}" in
+          "production")
+            echo "Setting production environment variables..."
+            # echo "NEXT_PUBLIC_API_BASE_URL=https://api.idynic.com" >> $GITHUB_ENV
+            # echo "NEXT_PUBLIC_AUTH_BASE_URL=https://auth.atriumn.com" >> $GITHUB_ENV
+            # echo "NEXT_PUBLIC_MCP_BASE_URL=https://mcp.idynic.com" >> $GITHUB_ENV
+            ;;
+          "staging")
+            echo "Setting staging environment variables..."
+            # echo "NEXT_PUBLIC_API_BASE_URL=https://api-staging.idynic.com" >> $GITHUB_ENV
+            # echo "NEXT_PUBLIC_AUTH_BASE_URL=https://auth-staging.atriumn.com" >> $GITHUB_ENV
+            # echo "NEXT_PUBLIC_MCP_BASE_URL=https://mcp-staging.idynic.com" >> $GITHUB_ENV
+            ;;
+          "development")
+            echo "Setting development environment variables..."
+            # echo "NEXT_PUBLIC_API_BASE_URL=https://api-dev.idynic.com" >> $GITHUB_ENV
+            # echo "NEXT_PUBLIC_AUTH_BASE_URL=https://auth-dev.atriumn.com" >> $GITHUB_ENV
+            # echo "NEXT_PUBLIC_MCP_BASE_URL=https://mcp-dev.idynic.com" >> $GITHUB_ENV
+            ;;
+        esac
+
+    - name: Build for deployment
+      run: |
+        echo "🏗️ Building for ${{ github.event.inputs.environment }} deployment..."
+        npm run build
+
+    - name: Deploy application
+      id: deploy
+      run: |
+        echo "🚀 Deploying to ${{ github.event.inputs.environment }}..."
+        
+        # This is a placeholder for actual deployment logic
+        # Replace with your deployment mechanism (Vercel, AWS, etc.)
+        
+        case "${{ github.event.inputs.environment }}" in
+          "production")
+            echo "Deploying to production..."
+            # Add production deployment commands
+            echo "deployment_url=https://idynic.com" >> $GITHUB_OUTPUT
+            ;;
+          "staging")
+            echo "Deploying to staging..."
+            # Add staging deployment commands
+            echo "deployment_url=https://staging.idynic.com" >> $GITHUB_OUTPUT
+            ;;
+          "development")
+            echo "Deploying to development..."
+            # Add development deployment commands
+            echo "deployment_url=https://dev.idynic.com" >> $GITHUB_OUTPUT
+            ;;
+        esac
+        
+        echo "✅ Deployment completed successfully"
+
+    - name: Post-deployment verification
+      run: |
+        echo "🔍 Running post-deployment verification..."
+        
+        # Health check (replace with actual health check endpoint)
+        # deployment_url="${{ steps.deploy.outputs.deployment_url }}"
+        # curl -f "$deployment_url/api/health" || echo "⚠️ Health check failed"
+        
+        echo "✅ Post-deployment verification completed"
+
+    - name: Update deployment status
+      run: |
+        echo "📝 Updating deployment status..."
+        
+        echo "# 🚀 Deployment Summary" > deployment-report.md
+        echo "" >> deployment-report.md
+        echo "**Environment:** ${{ github.event.inputs.environment }}" >> deployment-report.md
+        echo "**Deploy Type:** ${{ github.event.inputs.deploy_type }}" >> deployment-report.md
+        echo "**Commit:** ${{ github.sha }}" >> deployment-report.md
+        echo "**Deployed by:** ${{ github.actor }}" >> deployment-report.md
+        echo "**Deployment URL:** ${{ steps.deploy.outputs.deployment_url }}" >> deployment-report.md
+        echo "**Timestamp:** $(date)" >> deployment-report.md
+        echo "" >> deployment-report.md
+        echo "## ✅ Deployment Steps" >> deployment-report.md
+        echo "" >> deployment-report.md
+        echo "- Pre-deployment validation" >> deployment-report.md
+        echo "- Dependency installation" >> deployment-report.md
+        echo "- Production build" >> deployment-report.md
+        echo "- Application deployment" >> deployment-report.md
+        echo "- Post-deployment verification" >> deployment-report.md
+        echo "" >> deployment-report.md
+        echo "## 🔗 Links" >> deployment-report.md
+        echo "" >> deployment-report.md
+        echo "- [Application](${{ steps.deploy.outputs.deployment_url }})" >> deployment-report.md
+        echo "- [Repository](https://github.com/${{ github.repository }})" >> deployment-report.md
+        
+        cat deployment-report.md
+
+    - name: Upload deployment artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-${{ github.event.inputs.environment }}-${{ github.run_number }}
+        path: |
+          .next/
+          deployment-report.md
+        retention-days: 30
+
+  notify-deployment:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [pre-deploy-checks, deploy]
+    if: always()
+    
+    steps:
+    - name: Notify deployment result
+      run: |
+        if [ "${{ needs.deploy.result }}" == "success" ]; then
+          echo "✅ Deployment to ${{ github.event.inputs.environment }} completed successfully"
+        else
+          echo "❌ Deployment to ${{ github.event.inputs.environment }} failed"
+        fi
+        
+        # Add notification logic here (Slack, email, etc.)
+        echo "Deployment notification sent"

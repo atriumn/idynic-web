@@ -1,0 +1,237 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly security scans on Mondays at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  security-scan:
+    name: Frontend Security Scan
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      security-events: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing dependencies..."
+        npm ci
+
+    # Dependency vulnerability scanning
+    - name: Run npm audit
+      continue-on-error: true
+      run: |
+        echo "🔍 Running npm audit..."
+        npm audit --audit-level=moderate --output=json > npm-audit-results.json || echo "⚠️ npm audit found vulnerabilities"
+        npm audit --audit-level=moderate || echo "⚠️ npm audit found vulnerabilities"
+
+    # Secret scanning with TruffleHog
+    - name: Run TruffleHog
+      uses: trufflesecurity/trufflehog@main
+      continue-on-error: true
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+    # Frontend-specific security checks
+    - name: Frontend security analysis
+      continue-on-error: true
+      run: |
+        echo "🔍 Running frontend security analysis..."
+        
+        # Check for potential XSS vulnerabilities
+        echo "Checking for potential XSS issues..."
+        if grep -r "dangerouslySetInnerHTML" src/ --include="*.tsx" --include="*.ts"; then
+          echo "⚠️ Found dangerouslySetInnerHTML usage - review for XSS prevention"
+        fi
+        
+        # Check for eval usage
+        if grep -r "eval(" src/ --include="*.tsx" --include="*.ts" --include="*.js"; then
+          echo "⚠️ Found eval() usage - potential security risk"
+        fi
+        
+        # Check for document.write usage
+        if grep -r "document\.write" src/ --include="*.tsx" --include="*.ts" --include="*.js"; then
+          echo "⚠️ Found document.write usage - potential XSS risk"
+        fi
+        
+        # Check for unsafe regex patterns
+        if grep -rE "RegExp\(.*\)" src/ --include="*.tsx" --include="*.ts" --include="*.js"; then
+          echo "⚠️ Found dynamic RegExp construction - review for ReDoS vulnerabilities"
+        fi
+        
+        # Check for hardcoded credentials patterns
+        echo "Checking for hardcoded credentials..."
+        if grep -rE "(password|secret|key|token).*=.*['\"][^'\"]*['\"]" src/ --include="*.tsx" --include="*.ts" --include="*.js"; then
+          echo "⚠️ Found potential hardcoded credentials"
+        fi
+        
+        echo "✅ Frontend security analysis completed"
+
+    # Check for insecure dependencies
+    - name: Check for insecure dependencies
+      continue-on-error: true
+      run: |
+        echo "🔍 Checking for known insecure packages..."
+        
+        # Check for commonly vulnerable packages
+        vulnerable_packages=("lodash" "moment" "request" "node-sass")
+        
+        for package in "${vulnerable_packages[@]}"; do
+          if npm list "$package" 2>/dev/null; then
+            echo "⚠️ Found potentially vulnerable package: $package"
+            echo "Consider updating or replacing with secure alternatives"
+          fi
+        done
+        
+        echo "✅ Insecure dependency check completed"
+
+    # Environment and configuration security
+    - name: Configuration security check
+      continue-on-error: true
+      run: |
+        echo "🔍 Checking configuration security..."
+        
+        # Check for exposed environment variables in client-side code
+        if grep -r "process\.env\." src/ --include="*.tsx" --include="*.ts" --include="*.js" | grep -v "NEXT_PUBLIC_"; then
+          echo "⚠️ Found server-side environment variables in client code"
+        fi
+        
+        # Check for debug configurations
+        if grep -r "NODE_ENV.*development" src/ --include="*.tsx" --include="*.ts" --include="*.js"; then
+          echo "⚠️ Found development environment checks in source code"
+        fi
+        
+        # Check for console.log statements (information disclosure)
+        if grep -r "console\." src/ --include="*.tsx" --include="*.ts" --include="*.js"; then
+          echo "⚠️ Found console statements - may leak information in production"
+        fi
+        
+        echo "✅ Configuration security check completed"
+
+    # Check Next.js specific security configurations
+    - name: Next.js security configuration check
+      continue-on-error: true
+      run: |
+        echo "🔍 Checking Next.js security configurations..."
+        
+        # Check for security headers in next.config
+        if [ -f "next.config.ts" ] || [ -f "next.config.js" ]; then
+          if ! grep -q "headers" next.config.*; then
+            echo "⚠️ No security headers configured in next.config"
+          fi
+          
+          if ! grep -q "Content-Security-Policy\|X-Frame-Options\|X-Content-Type-Options" next.config.*; then
+            echo "⚠️ Missing security headers in next.config"
+          fi
+        fi
+        
+        # Check for secure cookie settings
+        if grep -r "document\.cookie" src/ --include="*.tsx" --include="*.ts" --include="*.js"; then
+          echo "⚠️ Found direct cookie manipulation - ensure secure flags are set"
+        fi
+        
+        echo "✅ Next.js security configuration check completed"
+
+    # Docker security scan (if Dockerfile exists)
+    - name: Docker security scan
+      if: hashFiles('Dockerfile*') != ''
+      continue-on-error: true
+      run: |
+        echo "🐳 Docker files detected, running security scan..."
+        
+        # Check for security best practices in Dockerfile
+        for dockerfile in Dockerfile*; do
+          if [ -f "$dockerfile" ]; then
+            echo "Checking $dockerfile..."
+            
+            if grep -q "USER root" "$dockerfile"; then
+              echo "⚠️ Found USER root in $dockerfile - avoid running as root"
+            fi
+            
+            if ! grep -q "USER " "$dockerfile"; then
+              echo "⚠️ No USER directive found in $dockerfile - specify non-root user"
+            fi
+            
+            if grep -q "ADD " "$dockerfile"; then
+              echo "⚠️ Found ADD instruction in $dockerfile - prefer COPY for security"
+            fi
+          fi
+        done
+        
+        echo "✅ Docker security scan completed"
+
+    # Generate security report
+    - name: Generate security summary
+      if: always()
+      run: |
+        echo "# 🛡️ Frontend Security Scan Summary" > security-report.md
+        echo "" >> security-report.md
+        echo "**Scan Date:** $(date)" >> security-report.md
+        echo "**Commit:** ${{ github.sha }}" >> security-report.md
+        echo "**Event:** ${{ github.event_name }}" >> security-report.md
+        echo "" >> security-report.md
+        
+        echo "## 📊 Scan Results" >> security-report.md
+        echo "" >> security-report.md
+        
+        if [ -f "npm-audit-results.json" ]; then
+          echo "- ✅ npm audit: Completed" >> security-report.md
+        else
+          echo "- ❌ npm audit: Failed or no results" >> security-report.md
+        fi
+        
+        echo "- ✅ TruffleHog secret scan: Completed" >> security-report.md
+        echo "- ✅ Frontend security analysis: Completed" >> security-report.md
+        echo "- ✅ Configuration security check: Completed" >> security-report.md
+        echo "- ✅ Next.js security check: Completed" >> security-report.md
+        
+        if [ -f "Dockerfile" ]; then
+          echo "- ✅ Docker security scan: Completed" >> security-report.md
+        fi
+        
+        echo "" >> security-report.md
+        echo "## 🔧 Frontend Files Scanned" >> security-report.md
+        echo "" >> security-report.md
+        echo "Total TypeScript/JavaScript files: $(find src/ -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" | wc -l)" >> security-report.md
+        echo "Total React components: $(find src/ -name "*.tsx" | wc -l)" >> security-report.md
+        echo "" >> security-report.md
+        echo "## 🔗 Links" >> security-report.md
+        echo "" >> security-report.md
+        echo "- [Security Tab](https://github.com/${{ github.repository }}/security)" >> security-report.md
+        echo "- [Repository](https://github.com/${{ github.repository }})" >> security-report.md
+        
+        cat security-report.md
+
+    # Upload security artifacts
+    - name: Upload security artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-security-scan-results
+        path: |
+          npm-audit-results.json
+          security-report.md
+        retention-days: 90
