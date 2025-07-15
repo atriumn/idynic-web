@@ -24,7 +24,7 @@ export default function AboutPage() {
 
             <h2>How It Works</h2>
             <p>
-              Our platform uses advanced AI to analyze your professional experiences, skills, and 
+              Our platform uses advanced AI to analyze your professional experiences, traits, and 
               achievements to create a comprehensive identity graph. This foundation enables us to 
               generate highly targeted solutions for specific opportunities, increasing your chances 
               of success.

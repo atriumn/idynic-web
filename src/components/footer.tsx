@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Footer() {
   return (
@@ -8,10 +9,11 @@ export function Footer() {
           {/* Logo & Description */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-white font-bold text-lg">I</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Idynic</span>
+              <img
+                src="/logo.png"
+                alt="Idynic"
+                className="h-8 w-auto"
+              />
             </div>
             <p className="text-gray-600 text-sm max-w-md">
               Strategic Identity & Solution Platform. Build your professional identity through evidence-based AI insights and tailored opportunity solutions.

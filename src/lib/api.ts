@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
+import { mcpClient } from './mcp';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081';
-const MCP_BASE_URL = process.env.NEXT_PUBLIC_MCP_BASE_URL || 'http://localhost:9001';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -11,17 +11,32 @@ const apiClient = axios.create({
   },
 });
 
-// Create MCP axios instance
-const mcpClient = axios.create({
-  baseURL: MCP_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth interceptor to both clients
+// Add auth interceptor to apiClient
 const authInterceptor = (config: any) => {
   const token = localStorage.getItem('access_token');
+  
+  // Decode token to see what's in it
+  let tokenClaims = null;
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      tokenClaims = {
+        iss: payload.iss,
+        aud: payload.aud,
+        client_id: payload.client_id,
+        scope: payload.scope
+      };
+    } catch (e) {
+      console.error('Failed to decode token:', e);
+    }
+  }
+  
+  console.log('API Request Auth Debug:', {
+    url: config.url,
+    hasToken: !!token,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN',
+    tokenClaims
+  });
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -72,10 +87,8 @@ const responseErrorInterceptor = async (error: any) => {
 };
 
 apiClient.interceptors.request.use(authInterceptor);
-mcpClient.interceptors.request.use(authInterceptor);
 
 apiClient.interceptors.response.use(responseInterceptor, responseErrorInterceptor);
-mcpClient.interceptors.response.use(responseInterceptor, responseErrorInterceptor);
 
 // Types based on backend models
 export interface Identity {
@@ -359,25 +372,19 @@ export const api = {
     },
   },
 
-  // MCP Tools - only actual available tools from the backend
+  // MCP Tools - using proper MCP client
   mcp: {
-    // Extract traits from resume text
-    extractResumeTraits: async (resumeText: string): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/extract_resume_traits', {
-        args: { resume_text: resumeText }
-      });
-      return response.data;
+    // Resume Analysis (Async)
+    analyzeResume: async (resumeText: string): Promise<any> => {
+      return await mcpClient.analyzeResume(resumeText);
     },
     
-    // Extract traits from story/narrative text
+    // Extract traits from story/narrative text (Async)
     extractStoryTraits: async (storyText: string): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/extract_story_traits', {
-        args: { story_text: storyText }
-      });
-      return response.data;
+      return await mcpClient.extractStoryTraits(storyText);
     },
     
-    // Analyze job posting text and extract requirements
+    // Analyze job posting text and extract requirements (Async)
     analyzeJobPosting: async (jobPostingText: string, jobUrl?: string): Promise<any> => {
       console.log('🌐 MCP API: Calling analyze_job_posting with:', {
         job_posting_text: jobPostingText.substring(0, 100) + '...',
@@ -385,61 +392,78 @@ export const api = {
       });
       
       try {
-        const response = await mcpClient.post('/mcp/tools/analyze_job_posting', {
-          args: { 
-            job_posting_text: jobPostingText,
-            job_url: jobUrl || ""
-          }
-        });
-        
-        console.log('🌐 MCP API: Raw response:', response);
-        console.log('🌐 MCP API: Response data:', response.data);
-        console.log('🌐 MCP API: Response status:', response.status);
-        
-        return response.data;
+        const result = await mcpClient.analyzeJobPosting(jobPostingText, jobUrl);
+        console.log('🌐 MCP API: Response:', result);
+        return result;
       } catch (error) {
         console.error('🌐 MCP API: Request failed:', error);
-        if (error.response) {
-          console.error('🌐 MCP API: Error response:', error.response.data);
-          console.error('🌐 MCP API: Error status:', error.response.status);
-        }
         throw error;
       }
     },
     
-    // Generate a tailored solution for a specific opportunity
+    // Generate a tailored solution for a specific opportunity (Sync)
     generateSolution: async (opportunityId: string): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/generate_solution', {
-        args: { opportunity_id: opportunityId }
-      });
-      return response.data;
+      return await mcpClient.generateSolution(opportunityId);
     },
     
-    // Refine an existing solution based on feedback
+    // Refine an existing solution based on feedback (Sync)
     refineSolution: async (solutionId: string, refinementInstruction: string): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/refine_solution', {
-        args: { 
-          solution_id: solutionId,
-          refinement_instruction: refinementInstruction
-        }
-      });
-      return response.data;
+      return await mcpClient.refineSolution(solutionId, refinementInstruction);
     },
     
-    // Format solution as a resume
+    // Format solution as a resume (Sync)
     formatAsResume: async (solutionId: string): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/format_as_resume', {
-        args: { solution_id: solutionId }
-      });
-      return response.data;
+      return await mcpClient.formatAsResume(solutionId);
     },
     
-    // Format solution as a cover letter
+    // Format solution as a cover letter (Sync)
     formatAsCoverLetter: async (solutionId: string): Promise<any> => {
-      const response = await mcpClient.post('/mcp/tools/format_as_cover_letter', {
-        args: { solution_id: solutionId }
-      });
-      return response.data;
+      return await mcpClient.formatAsCoverLetter(solutionId);
+    },
+
+    // NEW: Resume Structure Tools (Sync)
+    getLatestResumeStructure: async (): Promise<any> => {
+      return await mcpClient.getLatestResumeStructure();
+    },
+
+    listResumeStructures: async (): Promise<any> => {
+      return await mcpClient.listResumeStructures();
+    },
+
+    getResumeStructure: async (evidenceId: string): Promise<any> => {
+      return await mcpClient.getResumeStructure(evidenceId);
+    },
+
+    // Advanced Tools (Sync)
+    generateResumePlan: async (opportunityId: string, userTraits?: any[]): Promise<any> => {
+      return await mcpClient.generateResumePlan(opportunityId, userTraits);
+    },
+
+    matchOpportunitiesToExperience: async (opportunityId: string, userId: string): Promise<any> => {
+      return await mcpClient.matchOpportunitiesToExperience(opportunityId, userId);
+    },
+
+    // Orchestration Tools
+    tailorFullResumeForOpportunity: async (baseResume: string, opportunityId: string): Promise<any> => {
+      return await mcpClient.tailorFullResumeForOpportunity(baseResume, opportunityId);
+    },
+
+    // Utility methods
+    getJobStatus: async (jobId: string): Promise<any> => {
+      return await mcpClient.getJobStatus(jobId);
+    },
+
+    waitForResult: async (jobId: string, pollInterval?: number): Promise<any> => {
+      return await mcpClient.waitForResult(jobId, pollInterval);
+    },
+
+    listTools: async (): Promise<string[]> => {
+      return await mcpClient.listTools();
+    },
+
+    // Generic tool caller
+    callTool: async (toolName: string, args: Record<string, any> = {}): Promise<any> => {
+      return await mcpClient.callTool(toolName, args);
     },
   },
 };

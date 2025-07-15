@@ -1,17 +1,32 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers";
 import { AuthProvider } from "@/lib/auth";
 
-const nunito = Nunito({
-  variable: "--font-nunito",
+const inter = Inter({
   subsets: ["latin"],
+  weight: ["100", "300", "400", "500", "600", "700"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
   title: "Idynic - Identity & Solution Platform",
   description: "Strategic Identity & Solution Platform powered by AI",
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon-180x180.png', sizes: '180x180', type: 'image/png' },
+    ],
+    other: [
+      { rel: 'apple-touch-icon-precomposed', url: '/apple-icon-precomposed.png' },
+    ],
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -21,9 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${nunito.variable} antialiased`}
-      >
+      <body className={`${inter.variable} antialiased`}>
         <QueryProvider>
           <AuthProvider>
             {children}

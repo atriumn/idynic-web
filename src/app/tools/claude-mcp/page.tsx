@@ -69,7 +69,7 @@ export default function ClaudeMCPPage() {
                   <div>
                     <h3 className="font-medium text-blue-900 mb-1">What you'll get</h3>
                     <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• Access your skills and opportunities directly in Claude</li>
+                      <li>• Access your traits and opportunities directly in Claude</li>
                       <li>• Generate tailored resumes and cover letters</li>
                       <li>• Analyze job postings with your personal profile</li>
                       <li>• Get AI-powered career advice based on your data</li>
@@ -209,7 +209,7 @@ export default function ClaudeMCPPage() {
                   <p className="text-gray-600 mb-3">Try asking Claude about your profile:</p>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-blue-800 font-mono text-sm">
-                      "What are my top skills according to my Idynic profile?"
+                      "What are my top traits according to my Idynic profile?"
                     </p>
                   </div>
                 </div>

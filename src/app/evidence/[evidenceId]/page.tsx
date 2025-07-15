@@ -226,7 +226,7 @@ function EvidenceDetailPageContent() {
                 <CardTitle>Extracted Traits</CardTitle>
               </div>
               <CardDescription>
-                Skills and competencies identified from this evidence
+                Traits and competencies identified from this evidence
               </CardDescription>
             </CardHeader>
             <CardContent>

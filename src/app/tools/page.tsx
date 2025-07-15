@@ -63,7 +63,7 @@ export default function ToolsPage() {
                 <div className="space-y-2 mb-6">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                    Access your skills and opportunities in Claude
+                    Access your traits and opportunities in Claude
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
@@ -117,7 +117,7 @@ export default function ToolsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
-                    Real-time skill gap analysis
+                    Real-time trait gap analysis
                   </div>
                 </div>
                 
@@ -157,7 +157,7 @@ export default function ToolsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                    Export skills and opportunities as JSON
+                    Export traits and opportunities as JSON
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
@@ -201,7 +201,7 @@ export default function ToolsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
-                    Import skill endorsements and recommendations
+                    Import trait endorsements and recommendations
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
@@ -235,7 +235,7 @@ export default function ToolsPage() {
                 </div>
                 
                 <p className="text-gray-600 mb-4">
-                  Automatically extract technical skills from your repositories and contribution history.
+                  Automatically extract technical traits from your repositories and contribution history.
                 </p>
                 
                 <div className="space-y-2 mb-6">
@@ -249,7 +249,7 @@ export default function ToolsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-1.5 h-1.5 bg-gray-800 rounded-full"></span>
-                    Extract documentation and communication skills
+                    Extract documentation and communication traits
                   </div>
                 </div>
                 

@@ -117,6 +117,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await authApi.login(username, password);
       
+      console.log('Login response:', {
+        hasAccessToken: !!response.access_token,
+        hasRefreshToken: !!response.refresh_token,
+        hasIdToken: !!response.id_token,
+        tokenPreview: response.access_token ? `${response.access_token.substring(0, 20)}...` : 'NO TOKEN'
+      });
+      
       localStorage.setItem('access_token', response.access_token);
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
@@ -125,9 +132,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('id_token', response.id_token);
       }
 
-      // Get user profile
-      const userProfile = await authApi.getUserProfile();
-      setUser(userProfile);
+      // Extract user info from id_token instead of calling /auth/me
+      if (response.id_token) {
+        try {
+          // Decode the JWT payload (base64 decode the middle part)
+          const payload = JSON.parse(atob(response.id_token.split('.')[1]));
+          setUser({
+            username: payload['cognito:username'] || payload.sub,
+            attributes: {
+              email: payload.email,
+              sub: payload.sub,
+              // Add other attributes as needed
+            }
+          });
+        } catch (error) {
+          console.error('Failed to decode id_token:', error);
+          // Fallback to basic user info
+          setUser({
+            username: username,
+            attributes: { email: username }
+          });
+        }
+      } else {
+        // Fallback if no id_token
+        setUser({
+          username: username,
+          attributes: { email: username }
+        });
+      }
       setIsAuthenticated(true);
       // Start proactive token refresh
       startTokenRefreshTimer();

@@ -31,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Plus, Copy, Eye, EyeOff, Trash2, Key, AlertCircle } from 'lucide-react';
+import authApi from '@/lib/auth-api';
 
 interface ApiKey {
   id: string;
@@ -49,8 +50,6 @@ interface CreateApiKeyResponse {
   expires_at: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://dev.auth.atriumn.com';
-
 export default function ApiKeysPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
@@ -63,34 +62,9 @@ export default function ApiKeysPage() {
   const { data: apiKeysData, isLoading, error } = useQuery<ApiKey[]>({
     queryKey: ['api-keys'],
     queryFn: async () => {
-      const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('No access token found');
-
-      const response = await fetch(`${API_BASE_URL}/auth/me/api-keys`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch API keys: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      // Handle different possible response structures
-      if (Array.isArray(result)) {
-        return result;
-      } else if (result && result.api_keys !== undefined) {
-        // Handle case where api_keys is null (no keys) or an array
-        return Array.isArray(result.api_keys) ? result.api_keys : [];
-      } else if (result && Array.isArray(result.data)) {
-        return result.data;
-      } else {
-        // Fallback for any other response structure
-        return [];
-      }
+      const response = await authApi.listAPIKeys();
+      // The response has an api_keys property
+      return response.api_keys || [];
     },
   });
 
@@ -99,23 +73,7 @@ export default function ApiKeysPage() {
 
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: { name: string; expires_in_days: number }) => {
-      const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('No access token found');
-
-      const response = await fetch(`${API_BASE_URL}/auth/me/api-keys`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create API key: ${response.statusText}`);
-      }
-
-      return response.json();
+      return await authApi.createAPIKey(data.name, data.expires_in_days);
     },
     onSuccess: (data) => {
       setCreatedApiKey(data);
@@ -128,19 +86,7 @@ export default function ApiKeysPage() {
 
   const deleteApiKeyMutation = useMutation({
     mutationFn: async (keyId: string) => {
-      const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('No access token found');
-
-      const response = await fetch(`${API_BASE_URL}/auth/me/api-keys/${keyId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete API key: ${response.statusText}`);
-      }
+      return await authApi.deleteAPIKey(keyId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });

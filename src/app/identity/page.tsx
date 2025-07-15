@@ -5,10 +5,10 @@ import { api } from '@/lib/api';
 import { ProtectedRoute } from '@/components/protected-route';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, MapPin, Briefcase, Mail, Target, TrendingUp, FileText, Brain, Sparkles } from 'lucide-react';
+import { CustomIcon } from '@/components/ui/custom-icon';
 import { useState } from 'react';
 
 interface Identity {
@@ -25,6 +25,7 @@ interface Trait {
   name: string;
   weight: number;
   lastObserved: number;
+  traitType: string;
   evidenceSnippets?: string[];
   reasoning?: string[];
 }
@@ -36,48 +37,21 @@ interface IdentityGraph {
 }
 
 function IdentityGraphPageContent() {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTraitType, setSelectedTraitType] = useState<string | null>(null);
+  const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const { data: identityGraph, isLoading, error } = useQuery({
     queryKey: ['identity-graph'],
     queryFn: api.identity.getIdentityGraph,
   });
 
-  // Debug logging
-  console.log('🔍 Identity Graph Debug:', {
-    isLoading,
-    error,
-    identityGraph,
-    traitsCount: identityGraph?.traits?.length,
-    sampleTraits: identityGraph?.traits?.slice(0, 3)
-  });
-
-  // Group traits by weight ranges for visualization
-  const getTraitsByStrength = (traits: Trait[] | null | undefined) => {
-    const validTraits = Array.isArray(traits) ? traits : [];
-    const strong = validTraits.filter(t => t.weight >= 0.8);
-    const moderate = validTraits.filter(t => t.weight >= 0.6 && t.weight < 0.8);
-    const emerging = validTraits.filter(t => t.weight < 0.6);
-    return { strong, moderate, emerging };
-  };
-
-  // Get top skills for constellation view
-  const getTopTraits = (traits: Trait[] | null | undefined, count: number = 10) => {
-    const validTraits = Array.isArray(traits) ? traits : [];
-    return [...validTraits]
-      .sort((a, b) => b.weight - a.weight)
-      .slice(0, count);
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-64"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="h-64 bg-gray-200 rounded"></div>
-            <div className="lg:col-span-2 h-96 bg-gray-200 rounded"></div>
-          </div>
+          <div className="h-96 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
@@ -96,199 +70,331 @@ function IdentityGraphPageContent() {
   }
 
   const { identity = {}, traits: rawTraits, evidenceCount = 0 } = identityGraph;
-  // Ensure traits is always an array, even if the API returns null
   const traits = Array.isArray(rawTraits) ? rawTraits : [];
-  const { strong, moderate, emerging } = getTraitsByStrength(traits);
-  const topTraits = getTopTraits(traits);
 
-  // Debug trait categorization
-  console.log('📊 Trait Categorization Debug:', {
-    totalTraits: traits.length,
-    strong: strong.length,
-    moderate: moderate.length,
-    emerging: emerging.length,
-    strongTraits: strong.map(t => ({ name: t.name, weight: t.weight, code: t.trait })),
-    moderateTraits: moderate.map(t => ({ name: t.name, weight: t.weight, code: t.trait })),
-    emergingTraits: emerging.map(t => ({ name: t.name, weight: t.weight, code: t.trait })),
-    topTraits: topTraits.map(t => ({ name: t.name, weight: t.weight, code: t.trait }))
-  });
+  // Get unique trait types
+  const traitTypes = Array.from(new Set(traits.map(t => t.traitType))).sort();
+
+  // Filter traits
+  const getFilteredTraits = () => {
+    let filtered = traits;
+    
+    if (selectedTraitType) {
+      filtered = filtered.filter(t => t.traitType === selectedTraitType);
+    }
+    
+    if (selectedConfidence === 'strong') {
+      filtered = filtered.filter(t => t.weight >= 0.8);
+    } else if (selectedConfidence === 'moderate') {
+      filtered = filtered.filter(t => t.weight >= 0.6 && t.weight < 0.8);
+    } else if (selectedConfidence === 'emerging') {
+      filtered = filtered.filter(t => t.weight < 0.6);
+    }
+    
+    return filtered.sort((a, b) => b.weight - a.weight);
+  };
+
+  const filteredTraits = getFilteredTraits();
 
   return (
     <div>
-      <main className="relative bg-gray-50 min-h-screen">
+      <main className="bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{traits.length}</div>
-                  <div className="text-sm text-gray-600">Total Skills</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Brain className="h-6 w-6 text-blue-600" />
-                </div>
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Identity Graph</h1>
+            <p className="text-gray-600">
+              {traits.length} traits discovered across {evidenceCount} pieces of evidence
+            </p>
+          </div>
+
+          {/* Modern Filter Pills */}
+          <div className="mb-6">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Type Pills */}
+              <div 
+                className={`px-3 py-1 rounded-full text-sm cursor-pointer transition-all ${
+                  selectedTraitType === null 
+                    ? 'bg-[#137dc5] text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                onClick={() => setSelectedTraitType(null)}
+              >
+                All {traits.length}
               </div>
-            </div>
-            
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{strong.length}</div>
-                  <div className="text-sm text-gray-600">Strong Skills</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-green-600 font-bold">💪</span>
-                </div>
+              {traitTypes.map((type) => {
+                const count = traits.filter(t => t.traitType === type).length;
+                return (
+                  <div
+                    key={type}
+                    className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm cursor-pointer transition-all ${
+                      selectedTraitType === type
+                        ? 'bg-[#137dc5] text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                    onClick={() => setSelectedTraitType(type)}
+                  >
+                    <CustomIcon 
+                      name={
+                        type === 'Skill' ? 'skill' :
+                        type === 'Knowledge' ? 'knowledge' :
+                        type === 'Work Activity' ? 'work-activity' :
+                        type === 'Work Style' ? 'work-style' :
+                        type === 'Tool' ? 'tool' : 'skill'
+                      }
+                      size={14}
+                      className={selectedTraitType === type ? 'opacity-80' : 'opacity-60'}
+                    />
+                    {type} {count}
+                  </div>
+                );
+              })}
+              
+              {/* Separator */}
+              <div className="w-px h-6 bg-gray-300 mx-2"></div>
+              
+              {/* Confidence Pills */}
+              <div 
+                className={`px-3 py-1 rounded-full text-sm cursor-pointer transition-all ${
+                  selectedConfidence === null 
+                    ? 'bg-gray-800 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                onClick={() => setSelectedConfidence(null)}
+              >
+                All Confidence
               </div>
-            </div>
-            
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{moderate.length}</div>
-                  <div className="text-sm text-gray-600">Moderate Skills</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <span className="text-yellow-600 font-bold">⚡</span>
-                </div>
+              <div 
+                className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm cursor-pointer transition-all ${
+                  selectedConfidence === 'strong' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-green-50 text-green-700 hover:bg-green-100'
+                }`}
+                onClick={() => setSelectedConfidence(selectedConfidence === 'strong' ? null : 'strong')}
+              >
+                <CustomIcon 
+                  name="strong-confidence"
+                  size={14}
+                  className="opacity-70"
+                />
+                80%+
               </div>
-            </div>
-            
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{emerging.length}</div>
-                  <div className="text-sm text-gray-600">Emerging Skills</div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                  <span className="text-purple-600 font-bold">🌱</span>
-                </div>
+              <div 
+                className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm cursor-pointer transition-all ${
+                  selectedConfidence === 'moderate' 
+                    ? 'bg-yellow-600 text-white' 
+                    : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
+                }`}
+                onClick={() => setSelectedConfidence(selectedConfidence === 'moderate' ? null : 'moderate')}
+              >
+                <CustomIcon 
+                  name="moderate-confidence"
+                  size={14}
+                  className="opacity-70"
+                />
+                60-79%
+              </div>
+              <div 
+                className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm cursor-pointer transition-all ${
+                  selectedConfidence === 'emerging' 
+                    ? 'bg-gray-600 text-white' 
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                }`}
+                onClick={() => setSelectedConfidence(selectedConfidence === 'emerging' ? null : 'emerging')}
+              >
+                <CustomIcon 
+                  name="emerging-confidence"
+                  size={14}
+                  className="opacity-70"
+                />
+                &lt;60%
               </div>
             </div>
           </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Results Summary & View Toggle */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {filteredTraits.length} {filteredTraits.length === 1 ? 'trait' : 'traits'}
+              {selectedTraitType && ` in ${selectedTraitType}`}
+              {selectedConfidence && ` with ${selectedConfidence} confidence`}
+            </h2>
             
-            {/* Left Column - Skill Categories */}
-            <div className="space-y-6">
-              {/* Skill Strength Breakdown */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Skill Categories</h3>
-                
-                <div className="space-y-3">
-                  <div 
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedCategory === 'strong' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'
-                    }`}
-                    onClick={() => setSelectedCategory(selectedCategory === 'strong' ? null : 'strong')}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-green-800">Strong Skills</span>
-                      <Badge className="bg-green-100 text-green-800">{strong.length}</Badge>
-                    </div>
-                    <div className="text-sm text-green-600">80%+ confidence</div>
-                  </div>
-                  
-                  <div 
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedCategory === 'moderate' ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 hover:border-yellow-300'
-                    }`}
-                    onClick={() => setSelectedCategory(selectedCategory === 'moderate' ? null : 'moderate')}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-yellow-800">Moderate Skills</span>
-                      <Badge className="bg-yellow-100 text-yellow-800">{moderate.length}</Badge>
-                    </div>
-                    <div className="text-sm text-yellow-600">60-79% confidence</div>
-                  </div>
-                  
-                  <div 
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedCategory === 'emerging' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
-                    }`}
-                    onClick={() => setSelectedCategory(selectedCategory === 'emerging' ? null : 'emerging')}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-purple-800">Emerging Skills</span>
-                      <Badge className="bg-purple-100 text-purple-800">{emerging.length}</Badge>
-                    </div>
-                    <div className="text-sm text-purple-600">Below 60% confidence</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Top Skills Preview */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Skills</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {topTraits.slice(0, 6).map((trait, index) => (
-                    <div
-                      key={`${trait.trait}-${trait.name}-${index}`}
-                      className="flex flex-col items-center p-3 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border"
-                    >
-                      <div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs mb-2 ${
-                          trait.weight >= 0.8 ? 'bg-gradient-to-br from-green-500 to-green-600' :
-                          trait.weight >= 0.6 ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' :
-                          'bg-gradient-to-br from-gray-500 to-gray-600'
-                        }`}
-                      >
-                        {Math.round(trait.weight * 100)}
-                      </div>
-                      <h4 className="font-medium text-center text-xs leading-tight">{trait.name}</h4>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="p-2"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="6" width="18" height="2" rx="1" fill="currentColor"/>
+                  <rect x="3" y="10" width="18" height="2" rx="1" fill="currentColor"/>
+                  <rect x="3" y="14" width="18" height="2" rx="1" fill="currentColor"/>
+                  <rect x="3" y="18" width="18" height="2" rx="1" fill="currentColor"/>
+                </svg>
+              </Button>
+              <Button
+                variant={viewMode === 'cards' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+                className="p-2"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="7" height="7" rx="1" fill="currentColor"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1" fill="currentColor"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1" fill="currentColor"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor"/>
+                </svg>
+              </Button>
             </div>
+          </div>
 
-            {/* Right Column - Skills List */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {selectedCategory ? 
-                      `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Skills` : 
-                      'All Skills'
-                    }
-                  </h2>
-                  <div className="text-sm text-gray-500">
-                    {selectedCategory ? 
-                      `${selectedCategory === 'strong' ? strong.length : selectedCategory === 'moderate' ? moderate.length : emerging.length} skills` :
-                      `${traits.length} total skills`
-                    }
-                  </div>
+          {/* Table View */}
+          {viewMode === 'table' && (
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <div className="grid grid-cols-12 gap-6 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <div className="col-span-4">Trait Name</div>
+                  <div className="col-span-2">Type</div>
+                  <div className="col-span-1">Confidence</div>
+                  <div className="col-span-4">Evidence</div>
+                  <div className="col-span-1">Sources</div>
                 </div>
-                
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {(selectedCategory ? 
-                    selectedCategory === 'strong' ? strong :
-                    selectedCategory === 'moderate' ? moderate : emerging
-                    : traits.sort((a, b) => b.weight - a.weight)
-                  ).map((trait, index) => (
-                    <div key={`${trait.trait}-${trait.name}-${index}`} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{trait.name}</h4>
-                        <p className="text-sm text-gray-600 mt-1">{trait.evidence}</p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {filteredTraits.map((trait, index) => (
+                  <div key={`${trait.trait}-${trait.name}-${index}`} className="px-4 py-2 hover:bg-gray-50 transition-colors">
+                    <div className="grid grid-cols-12 gap-6 items-center">
+                      <div className="col-span-4">
+                        <h3 className="text-sm font-medium text-gray-900">{trait.name}</h3>
                       </div>
-                      <div className="text-right ml-4">
-                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      <div className="col-span-2">
+                        <div className="flex items-center gap-2">
+                          <CustomIcon 
+                            name={
+                              trait.traitType === 'Skill' ? 'skill' :
+                              trait.traitType === 'Knowledge' ? 'knowledge' :
+                              trait.traitType === 'Work Activity' ? 'work-activity' :
+                              trait.traitType === 'Work Style' ? 'work-style' :
+                              trait.traitType === 'Tool' ? 'tool' : 'skill'
+                            }
+                            size={16}
+                            className="opacity-60"
+                          />
+                          <Badge variant="secondary" className="text-xs">
+                            {trait.traitType}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="col-span-1">
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                           trait.weight >= 0.8 ? 'bg-green-100 text-green-800' :
                           trait.weight >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-purple-100 text-purple-800'
+                          'bg-gray-100 text-gray-800'
                         }`}>
+                          <CustomIcon 
+                            name={
+                              trait.weight >= 0.8 ? 'strong-confidence' :
+                              trait.weight >= 0.6 ? 'moderate-confidence' :
+                              'emerging-confidence'
+                            }
+                            size={12}
+                            className="opacity-70"
+                          />
                           {Math.round(trait.weight * 100)}%
                         </div>
                       </div>
+                      <div className="col-span-4">
+                        <p className="text-xs text-gray-600 line-clamp-2" title={trait.evidence}>
+                          {trait.evidence}
+                        </p>
+                      </div>
+                      <div className="col-span-1">
+                        {trait.evidenceSnippets && trait.evidenceSnippets.length > 1 && (
+                          <div className="text-xs text-gray-400">
+                            +{trait.evidenceSnippets.length - 1}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Card View */}
+          {viewMode === 'cards' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredTraits.map((trait, index) => (
+                <div key={`${trait.trait}-${trait.name}-${index}`} className="bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-gray-300">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-medium text-gray-900 text-sm leading-tight">{trait.name}</h3>
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ml-3 ${
+                      trait.weight >= 0.8 ? 'bg-green-100 text-green-800' :
+                      trait.weight >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      <CustomIcon 
+                        name={
+                          trait.weight >= 0.8 ? 'strong-confidence' :
+                          trait.weight >= 0.6 ? 'moderate-confidence' :
+                          'emerging-confidence'
+                        }
+                        size={12}
+                        className="opacity-70"
+                      />
+                      {Math.round(trait.weight * 100)}%
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-3">
+                    <CustomIcon 
+                      name={
+                        trait.traitType === 'Skill' ? 'skill' :
+                        trait.traitType === 'Knowledge' ? 'knowledge' :
+                        trait.traitType === 'Work Activity' ? 'work-activity' :
+                        trait.traitType === 'Work Style' ? 'work-style' :
+                        trait.traitType === 'Tool' ? 'tool' : 'skill'
+                      }
+                      size={16}
+                      className="opacity-60"
+                    />
+                    <Badge variant="secondary" className="text-xs">
+                      {trait.traitType}
+                    </Badge>
+                    {trait.evidenceSnippets && trait.evidenceSnippets.length > 1 && (
+                      <div className="text-xs text-gray-400 ml-auto">
+                        +{trait.evidenceSnippets.length - 1} sources
+                      </div>
+                    )}
+                  </div>
+                  
+                  <blockquote className="text-xs text-gray-600 italic border-l-2 border-gray-200 pl-3 line-clamp-3">
+                    {trait.evidence}
+                  </blockquote>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {filteredTraits.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No traits match the selected filters.</p>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSelectedTraitType(null);
+                  setSelectedConfidence(null);
+                }}
+                className="mt-4"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
         </div>
       </main>
       

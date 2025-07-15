@@ -13,8 +13,8 @@ import Link from 'next/link';
 import { FederatedAuthButtons } from '@/components/federated-auth-buttons';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('jeff@atriumn.com');
+  const [password, setPassword] = useState('Passw0rd#');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showResendButton, setShowResendButton] = useState(false);

@@ -67,18 +67,37 @@ authClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   
-  // Add client_id only to specific auth requests that need it (exclude signup)
-  if (config.url?.includes('/auth/') && config.data && clientId && 
-      !config.url.includes('/auth/signup')) {
-    config.data = {
-      ...config.data,
-      client_id: clientId
-    };
+  // Add client_id to auth requests that need it (but not for /auth/me endpoints)
+  if (config.url?.includes('/auth/') && clientId && !config.url.includes('/auth/signup') && !config.url.includes('/auth/me')) {
+    if (config.method === 'get') {
+      // For GET requests, add client_id as query parameter
+      config.params = {
+        ...config.params,
+        client_id: clientId
+      };
+    } else if (config.data) {
+      // For POST requests, add client_id to body
+      config.data = {
+        ...config.data,
+        client_id: clientId
+      };
+    }
   }
   
   // Add Bearer token to authenticated endpoints
   if (token && (config.url?.includes('/auth/me') || !config.url?.includes('/auth/'))) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  
+  // Debug logging for /auth/me/api-keys
+  if (config.url?.includes('/auth/me/api-keys')) {
+    console.log('API Keys Request:', {
+      url: config.url,
+      method: config.method,
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN',
+      headers: config.headers
+    });
   }
   
   return config;
