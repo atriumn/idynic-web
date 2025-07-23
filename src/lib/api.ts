@@ -15,7 +15,7 @@ const apiClient = axios.create({
 const authInterceptor = (config: any) => {
   const token = localStorage.getItem('access_token');
   
-  // Decode token to see what's in it
+  // Decode token to see what's in it (for debugging)
   let tokenClaims = null;
   if (token) {
     try {
@@ -37,6 +37,7 @@ const authInterceptor = (config: any) => {
     tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN',
     tokenClaims
   });
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -297,15 +298,16 @@ export const api = {
   // Identity Management
   identity: {
     getIdentityGraph: async (): Promise<Identity> => {
-      const response = await apiClient.get('/v1/user/identity-graph');
-      console.log('🌐 API Response Debug:', {
-        status: response.status,
-        headers: response.headers,
-        data: response.data,
-        traitsInResponse: response.data?.traits?.length,
-        sampleTraitsFromAPI: response.data?.traits?.slice(0, 2)
-      });
-      return response.data;
+      // TODO: Implement identity graph endpoint or replace with traits endpoint
+      // For now, return empty identity to prevent 500 errors
+      return {
+        userId: 'current-user',
+        traits: [],
+        retrievedAt: new Date().toISOString(),
+        totalTraits: 0,
+        evidence_count: 0,
+        data: {}
+      };
     },
     submitEvidence: async (evidence: EvidenceSubmissionRequest): Promise<{ evidenceId: string }> => {
       const response = await apiClient.post('/v1/evidence', evidence);

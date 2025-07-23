@@ -64,7 +64,8 @@ export interface FederatedCallbackResponse {
 
 // Add token interceptor for authenticated requests
 authClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  // Only access localStorage on client-side
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   
   // Add client_id to auth requests that need it (but not for /auth/me endpoints)

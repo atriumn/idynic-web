@@ -30,6 +30,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Only run on client-side (browser)
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     // Check if user is already logged in
     const token = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
@@ -82,6 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleRefreshToken = async () => {
+    // Only run on client-side (browser)
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) {
       setLoading(false);
