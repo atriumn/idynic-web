@@ -94,8 +94,9 @@ apiClient.interceptors.response.use(responseInterceptor, responseErrorIntercepto
 // Types based on backend models
 export interface Identity {
   userId: string;
-  data: Record<string, any>;
-  updatedAt: string;
+  traits: Trait[];
+  retrievedAt: string;
+  totalTraits: number;
 }
 
 export interface BasicInfo {
@@ -281,15 +282,24 @@ export interface EvidenceRecord {
   completedAt?: string;
 }
 
-export interface Trait {
-  trait: string;
-  evidence: string;
+export interface EvidenceSnippet {
+  evidenceId: string;
+  matchedText: string;
+  timestamp: string;
   confidence: number;
+}
+
+export interface Trait {
+  code: string;
   name: string;
   weight: number;
+  confidence: number;
+  evidenceCount: number;
+  firstObserved: number;
   lastObserved: number;
-  evidenceSnippets?: string[];
-  reasoning?: string[];
+  traitType: string;
+  evidenceSnippets: EvidenceSnippet[];
+  reasoning: string;
 }
 
 // API Functions
@@ -298,16 +308,8 @@ export const api = {
   // Identity Management
   identity: {
     getIdentityGraph: async (): Promise<Identity> => {
-      // TODO: Implement identity graph endpoint or replace with traits endpoint
-      // For now, return empty identity to prevent 500 errors
-      return {
-        userId: 'current-user',
-        traits: [],
-        retrievedAt: new Date().toISOString(),
-        totalTraits: 0,
-        evidence_count: 0,
-        data: {}
-      };
+      const response = await apiClient.get('/v1/user/identity-graph');
+      return response.data;
     },
     submitEvidence: async (evidence: EvidenceSubmissionRequest): Promise<{ evidenceId: string }> => {
       const response = await apiClient.post('/v1/evidence', evidence);

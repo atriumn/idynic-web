@@ -44,6 +44,8 @@ function IdentityGraphPageContent() {
   const { data: identityGraph, isLoading, error } = useQuery({
     queryKey: ['identity-graph'],
     queryFn: api.identity.getIdentityGraph,
+    retry: false, // Don't retry on errors to prevent auth interference
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   if (isLoading) {
@@ -69,8 +71,9 @@ function IdentityGraphPageContent() {
     );
   }
 
-  const { identity = {}, traits: rawTraits, evidenceCount = 0 } = identityGraph;
+  const { traits: rawTraits = [], totalTraits = 0 } = identityGraph;
   const traits = Array.isArray(rawTraits) ? rawTraits : [];
+  const evidenceCount = traits.reduce((sum, trait) => sum + trait.evidenceCount, 0);
 
   // Get unique trait types
   const traitTypes = Array.from(new Set(traits.map(t => t.traitType))).sort();
@@ -265,7 +268,7 @@ function IdentityGraphPageContent() {
               </div>
               <div className="divide-y divide-gray-100">
                 {filteredTraits.map((trait, index) => (
-                  <div key={`${trait.trait}-${trait.name}-${index}`} className="px-4 py-2 hover:bg-gray-50 transition-colors">
+                  <div key={`${trait.code}-${trait.name}-${index}`} className="px-4 py-2 hover:bg-gray-50 transition-colors">
                     <div className="grid grid-cols-12 gap-6 items-center">
                       <div className="col-span-4">
                         <h3 className="text-sm font-medium text-gray-900">{trait.name}</h3>
@@ -307,16 +310,14 @@ function IdentityGraphPageContent() {
                         </div>
                       </div>
                       <div className="col-span-4">
-                        <p className="text-xs text-gray-600 line-clamp-2" title={trait.evidence}>
-                          {trait.evidence}
+                        <p className="text-xs text-gray-600 line-clamp-2" title={trait.reasoning}>
+                          {trait.reasoning}
                         </p>
                       </div>
                       <div className="col-span-1">
-                        {trait.evidenceSnippets && trait.evidenceSnippets.length > 1 && (
-                          <div className="text-xs text-gray-400">
-                            +{trait.evidenceSnippets.length - 1}
-                          </div>
-                        )}
+                        <div className="text-xs text-gray-400">
+                          {trait.evidenceCount}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -329,7 +330,7 @@ function IdentityGraphPageContent() {
           {viewMode === 'cards' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredTraits.map((trait, index) => (
-                <div key={`${trait.trait}-${trait.name}-${index}`} className="bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-gray-300">
+                <div key={`${trait.code}-${trait.name}-${index}`} className="bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-gray-300">
                   <div className="flex items-start justify-between mb-3">
                     <h3 className="font-medium text-gray-900 text-sm leading-tight">{trait.name}</h3>
                     <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ml-3 ${
@@ -365,15 +366,13 @@ function IdentityGraphPageContent() {
                     <Badge variant="secondary" className="text-xs">
                       {trait.traitType}
                     </Badge>
-                    {trait.evidenceSnippets && trait.evidenceSnippets.length > 1 && (
-                      <div className="text-xs text-gray-400 ml-auto">
-                        +{trait.evidenceSnippets.length - 1} sources
-                      </div>
-                    )}
+                    <div className="text-xs text-gray-400 ml-auto">
+                      {trait.evidenceCount} sources
+                    </div>
                   </div>
                   
                   <blockquote className="text-xs text-gray-600 italic border-l-2 border-gray-200 pl-3 line-clamp-3">
-                    {trait.evidence}
+                    {trait.reasoning}
                   </blockquote>
                 </div>
               ))}

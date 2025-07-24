@@ -42,14 +42,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     if (token && refreshToken) {
       // Verify token is still valid by getting user profile
+      console.log('🔐 AuthProvider: Verifying token with getUserProfile...');
       authApi.getUserProfile()
         .then((userProfile) => {
+          console.log('🔐 AuthProvider: getUserProfile SUCCESS', userProfile);
           setUser(userProfile);
           setIsAuthenticated(true);
           // Start proactive token refresh
           startTokenRefreshTimer();
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log('🔐 AuthProvider: getUserProfile FAILED', error);
           // Token is invalid, try to refresh
           handleRefreshToken();
         })
@@ -96,11 +99,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) {
+      console.log('🔐 No refresh token available, clearing auth state');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('id_token');
+      setUser(null);
+      setIsAuthenticated(false);
       setLoading(false);
       return;
     }
 
     try {
+      console.log('🔐 Attempting token refresh...');
       const response = await authApi.refreshToken(refreshToken);
       localStorage.setItem('access_token', response.access_token);
       if (response.refresh_token) {
@@ -114,8 +124,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userProfile = await authApi.getUserProfile();
       setUser(userProfile);
       setIsAuthenticated(true);
+      console.log('🔐 Token refresh successful');
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.log('🔐 Token refresh failed, clearing auth state:', error.response?.status);
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('id_token');
